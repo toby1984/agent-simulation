@@ -1,0 +1,39 @@
+package de.codesourcery.sim.pathfinding;
+
+import de.codesourcery.sim.Vec2D;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+
+public interface NavMesh
+{
+    // DEBUG ONLY, REMOVE WHEN DONE
+    Vec2D getCoordinates(int nodeId);
+
+    /**
+     * Heuristic function that estimates to cost of reaching
+     * a certain destination node from some start node.
+     *
+     * @param nodeStart ID of start node
+     * @param nodeEnd ID of destination node
+     * @return cost
+     */
+    int calcH(int nodeStart, int nodeEnd);
+
+    /**
+     * Calculates the distance between two nodes.
+     * @param nodeA
+     * @param nodeB
+     * @return cost
+     */
+    int calcG(int nodeA, int nodeB);
+
+    /**
+     * Returns all neighbours for a given node that are walkable
+     * and NOT on the close list.
+     *
+     * @param node ID of node to check neighbours of
+     * @param visitedNodeIds Close list containing IDs of already visited nodes
+     * @param result array where to store neighbour node IDs in
+     * @return number of neighbour node IDs written to the result list
+     */
+    int getNeighbours(int node, IntOpenHashSet visitedNodeIds, int[] result);
+}

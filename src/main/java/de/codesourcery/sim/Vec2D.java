@@ -31,4 +31,10 @@ public class Vec2D
         float dy =other.y - y;
         return dx*dx + dy*dy;
     }
+
+    @Override
+    public String toString()
+    {
+        return "("+x+","+y+")";
+    }
 }
