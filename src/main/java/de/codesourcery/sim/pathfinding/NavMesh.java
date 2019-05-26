@@ -3,9 +3,21 @@ package de.codesourcery.sim.pathfinding;
 import de.codesourcery.sim.Vec2D;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
+/**
+ * Navigation node graph.
+ *
+ * Nodes are assumed to each have a unique integer ID and no two nodes
+ * with the same coordinates exist.
+ * @author tobias.gierke@code-sourcery.de
+ */
 public interface NavMesh
 {
-    // DEBUG ONLY, REMOVE WHEN DONE
+    /**
+     * DEBUG ONLY, REMOVE WHEN DONE.
+     *
+     * @param nodeId
+     * @return
+     */
     Vec2D getCoordinates(int nodeId);
 
     /**

@@ -369,14 +369,14 @@ D) Stop when you:
         // Function to insert a node into the heap
         public void insert(int element)
         {
-            if (size >= maxsize) {
-                throw new IllegalStateException("Heap full?");
+            if ((size+1) >= maxsize) {
+                throw new IllegalStateException("min-heap full");
             }
             data[++size] = element;
-            int current = size;
 
             if ( size > 1 )
             {
+                int current = size;
                 while ( f( current ) < f( parentIdx( current ) ) )
                 {
                     swap( current, parentIdx( current ) );

@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
 
 public class AStarTest extends JFrame
 {
-    private static final boolean RANDOM_DATA = false;
-    private static final int GRID_WIDTH = 20;
-    private static final int GRID_HEIGHT = 20;
+    private static final boolean RANDOM_DATA = true;
+    private static final int GRID_WIDTH = 256;
+    private static final int GRID_HEIGHT = 256;
 
     private final boolean[][] data;
 
