@@ -2,6 +2,8 @@ package de.codesourcery.sim.taskplanning;
 
 public interface Task
 {
+    void setID(long id);
+
     long getID();
 
     TaskType getType();

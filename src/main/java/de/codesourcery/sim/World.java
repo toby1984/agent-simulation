@@ -24,7 +24,7 @@ public class World
         for (int i = 0, buildingsSize = buildings.size(); i < buildingsSize; i++)
         {
             Building x = buildings.get( i );
-            if ( x.hasType( type ) )
+            if ( x.hasBuildingType( type ) )
             {
                 candidates.add( x );
             }

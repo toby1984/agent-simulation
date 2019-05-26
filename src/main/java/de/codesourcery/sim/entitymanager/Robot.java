@@ -8,21 +8,29 @@ import de.codesourcery.sim.taskplanning.TaskManager;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Robot implements TaskExecutor
+public class Robot implements TaskExecutor, IEntity
 {
+    private static final int MAX_CARRYING_CAPACITY = 1;
+
     private static final float MAX_SPEED = 10.0f; // meters/second
     private static final float MAX_CHARGE_PER_METER = 10.0f;
 
-    private static final float INITIAL_BATTERY_CHARGE = 100 * MAX_CHARGE_PER_METER; // can do 100m at full speed
+    private static final float MAX_BATTERY_CAPACITY = 100 * MAX_CHARGE_PER_METER; // can do 100m at full speed
 
     public final int id;
     public final Vec2D location;
 
-    private float batteryCapacity = INITIAL_BATTERY_CHARGE;
+    public ItemType carriedItem;
+    public int carriedAmount;
 
-    private Task activeTask = null;
+    public int maxStorage = MAX_CARRYING_CAPACITY;
 
-    private final List<Task> taskQueue = new ArrayList<>();
+    public float maxBatteryCapacity = MAX_BATTERY_CAPACITY;
+    public float batteryCapacity = MAX_BATTERY_CAPACITY;
+
+    public Task activeTask = null;
+
+    public final List<Task> taskQueue = new ArrayList<>();
 
     public Robot(int id, Vec2D location)
     {
@@ -78,5 +86,11 @@ public class Robot implements TaskExecutor
     public float getExecutionCost(Task task)
     {
         return task.getSource().getLocation().dst( getLocation() )*MAX_SPEED;
+    }
+
+    @Override
+    public Type getType()
+    {
+        return Type.ROBOT;
     }
 }

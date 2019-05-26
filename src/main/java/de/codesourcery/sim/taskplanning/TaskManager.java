@@ -6,6 +6,7 @@ import de.codesourcery.sim.entitymanager.IHasLocation;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 public class TaskManager
@@ -27,7 +28,7 @@ public class TaskManager
 
     private static final class TaskEntry
     {
-        final long creationTick;
+        final long creationTimeMillis; // ms since epoch
         final TaskSource source;
         final Task task;
 
@@ -36,9 +37,9 @@ public class TaskManager
         long assignTick;
         TaskExecutorEntry assignee;
 
-        private TaskEntry(TaskSource source, Task task,long creationTick)
+        private TaskEntry(TaskSource source, Task task,long creationTimeMillis)
         {
-            this.creationTick = creationTick;
+            this.creationTimeMillis = creationTimeMillis;
             this.source = source;
             this.task = task;
         }
@@ -80,6 +81,8 @@ public class TaskManager
 
     private final KNearest<TaskExecutorEntry> executors = new KNearest<>();
 
+    private final AtomicLong TASK_ID = new AtomicLong();
+
     public void register(TaskExecutor executor)
     {
         executors.add( new TaskExecutorEntry( executor ) );
@@ -90,9 +93,12 @@ public class TaskManager
         executors.removeByID( executor.getID() );
     }
 
-    public void enqueue(TaskSource source,Task task,long tickCounter)
+    public long enqueue(Task task)
     {
-        unassigned.put( task.getID(), new TaskEntry( source, task, tickCounter) );
+        final long id = TASK_ID.incrementAndGet();
+        task.setID( id );
+        unassigned.put( id , new TaskEntry( task.getSource(), task, System.currentTimeMillis()) );
+        return id;
     }
 
     public void visitTasks(TaskSource source, ITaskVisitor visitor)

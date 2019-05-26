@@ -1,13 +1,11 @@
 package de.codesourcery.sim.entitymanager;
 
-import de.codesourcery.sim.Vec2D;
-
-public interface IEntity 
+public interface IEntity extends IHasLocation
 {
     enum Type {
         ROBOT,
         BUILDING
-    };
+    }
 
     Type getType();
 
@@ -15,6 +13,4 @@ public interface IEntity
     {
         return t == getType();
     }
-
-    Vec2D getLocation();
 }

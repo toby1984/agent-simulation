@@ -3,7 +3,7 @@ package de.codesourcery.sim.entitymanager;
 import de.codesourcery.sim.Vec2D;
 import de.codesourcery.sim.taskplanning.TaskSource;
 
-public class Building implements TaskSource
+public class Building implements TaskSource, IEntity
 {
     public final int id;
     public final Vec2D location;
@@ -21,8 +21,8 @@ public class Building implements TaskSource
         return type;
     }
 
-    public boolean hasType(BuildingType t) {
-        return t.equals( this.type );
+    public boolean hasBuildingType(BuildingType t) {
+        return t == this.type;
     }
 
     @Override
@@ -35,5 +35,11 @@ public class Building implements TaskSource
     public Vec2D getLocation()
     {
         return location;
+    }
+
+    @Override
+    public Type getType()
+    {
+        return Type.BUILDING;
     }
 }
