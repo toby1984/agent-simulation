@@ -1,13 +1,14 @@
 package de.codesourcery.sim;
 
+import de.codesourcery.sim.entitymanager.IHasLocation;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class KNearest<T extends IHasLocation>
 {
-    private final Map<Long,T> items = new HashMap<Long,T>();
+    private final Int2ObjectOpenHashMap<T> items = new Int2ObjectOpenHashMap<>();
 
     public interface IVisitor<T>
     {
@@ -22,7 +23,7 @@ public class KNearest<T extends IHasLocation>
         items.remove( item.getID() );
     }
 
-    public void removeByID(long id)
+    public void removeByID(int id)
     {
         items.remove( id );
     }

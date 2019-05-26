@@ -1,19 +1,22 @@
-package de.codesourcery.sim;
+package de.codesourcery.sim.entitymanager;
+
+import de.codesourcery.sim.Vec2D;
+import de.codesourcery.sim.taskplanning.TaskSource;
 
 public class Building implements TaskSource
 {
-    public final long id;
+    public final int id;
     public final Vec2D location;
     public final BuildingType type;
 
-    public Building(long id, BuildingType type, Vec2D location)
+    public Building(int id, BuildingType type, Vec2D location)
     {
         this.id = id;
         this.location = new Vec2D(location);
         this.type = type;
     }
 
-    public BuildingType getType()
+    public BuildingType getBuildingType()
     {
         return type;
     }
@@ -23,7 +26,7 @@ public class Building implements TaskSource
     }
 
     @Override
-    public long getID()
+    public int getID()
     {
         return id;
     }

@@ -1,5 +1,9 @@
 package de.codesourcery.sim;
 
+import de.codesourcery.sim.entitymanager.Building;
+import de.codesourcery.sim.entitymanager.BuildingType;
+import de.codesourcery.sim.taskplanning.TaskManager;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +18,7 @@ public class World
 
     private final List<Building> buildings = new ArrayList<>();
 
-    public void visitClosestBuildings(Vec2D location, int count, BuildingType type,IVisitor visitor)
+    public void visitClosestBuildings(Vec2D location, int count, BuildingType type, IVisitor visitor)
     {
         final List<Building> candidates = new ArrayList<>(count);
         for (int i = 0, buildingsSize = buildings.size(); i < buildingsSize; i++)

@@ -20,7 +20,7 @@ public class Vec2D
     {
     }
 
-    float dst(Vec2D other)
+    public float dst(Vec2D other)
     {
         return (float) Math.sqrt( dst2(other) );
     }

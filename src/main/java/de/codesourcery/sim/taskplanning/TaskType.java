@@ -1,4 +1,4 @@
-package de.codesourcery.sim;
+package de.codesourcery.sim.taskplanning;
 
 public enum TaskType
 {

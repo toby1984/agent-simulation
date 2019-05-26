@@ -1,4 +1,8 @@
-package de.codesourcery.sim;
+package de.codesourcery.sim.taskplanning;
+
+import de.codesourcery.sim.KNearest;
+import de.codesourcery.sim.Vec2D;
+import de.codesourcery.sim.entitymanager.IHasLocation;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -59,7 +63,7 @@ public class TaskManager
         }
 
         @Override
-        public long getID()
+        public int getID()
         {
             return executor.getID();
         }

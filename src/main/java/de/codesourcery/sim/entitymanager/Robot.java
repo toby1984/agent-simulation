@@ -1,4 +1,9 @@
-package de.codesourcery.sim;
+package de.codesourcery.sim.entitymanager;
+
+import de.codesourcery.sim.Vec2D;
+import de.codesourcery.sim.taskplanning.Task;
+import de.codesourcery.sim.taskplanning.TaskExecutor;
+import de.codesourcery.sim.taskplanning.TaskManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +15,7 @@ public class Robot implements TaskExecutor
 
     private static final float INITIAL_BATTERY_CHARGE = 100 * MAX_CHARGE_PER_METER; // can do 100m at full speed
 
-    public final long id;
+    public final int id;
     public final Vec2D location;
 
     private float batteryCapacity = INITIAL_BATTERY_CHARGE;
@@ -19,14 +24,14 @@ public class Robot implements TaskExecutor
 
     private final List<Task> taskQueue = new ArrayList<>();
 
-    public Robot(long id, Vec2D location)
+    public Robot(int id, Vec2D location)
     {
         this.id = id;
         this.location = location;
     }
 
     @Override
-    public long getID()
+    public int getID()
     {
         return id;
     }
