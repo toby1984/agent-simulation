@@ -32,6 +32,11 @@ public class Vec2D
         return dx*dx + dy*dy;
     }
 
+    public void set(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
+
     @Override
     public String toString()
     {

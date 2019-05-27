@@ -4,6 +4,9 @@ public class Vec2Di
 {
     public int x,y;
 
+    public Vec2Di() {
+    }
+
     public Vec2Di(int x, int y)
     {
         this.x = x;
@@ -24,5 +27,10 @@ public class Vec2Di
     public String toString()
     {
         return "(" + x + "," + y + ")";
+    }
+
+    public void set(int x,int y) {
+        this.x = x;
+        this.y = y;
     }
 }
