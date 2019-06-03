@@ -20,6 +20,24 @@ public class Vec2D
     {
     }
 
+    public Vec2D scl(float value) {
+        this.x *= value;
+        this.y *= value;
+        return this;
+    }
+
+    public Vec2D add(Vec2D v) {
+        this.x += v.x;
+        this.y += v.y;
+        return this;
+    }
+
+    public Vec2D sub(Vec2D v) {
+        this.x -= v.x;
+        this.y -= v.y;
+        return this;
+    }
+
     public float dst(Vec2D other)
     {
         return (float) Math.sqrt( dst2(other) );
@@ -32,6 +50,16 @@ public class Vec2D
         return dx*dx + dy*dy;
     }
 
+    public float len2()
+    {
+        return x*x + y*y;
+    }
+
+    public float len()
+    {
+        return (float) Math.sqrt(len2());
+    }
+
     public void set(float x, float y) {
         this.x = x;
         this.y = y;
@@ -41,5 +69,32 @@ public class Vec2D
     public String toString()
     {
         return "("+x+","+y+")";
+    }
+
+    public Vec2D clamp (float min, float max)
+    {
+        final float len2 = len2();
+        if (len2 == 0f)
+        {
+            return this;
+        }
+        float max2 = max * max;
+        if (len2 > max2)
+        {
+            return scl((float)Math.sqrt(max2 / len2));
+        }
+        float min2 = min * min;
+        if (len2 < min2)
+        {
+            return scl((float)Math.sqrt(min2 / len2));
+        }
+        return this;
+    }
+
+    public Vec2D set(Vec2D v)
+    {
+        this.x = v.x;
+        this.y = v.y;
+        return this;
     }
 }
