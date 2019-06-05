@@ -3,10 +3,11 @@ package de.codesourcery.sim;
 public interface IItemReceiver
 {
     /**
+     * Offer a given item to this receiver.
      *
-     * @param type
-     * @param amount
-     * @return amount that really could be placed
+     * @param type item type offered
+     * @param amount amount offered
+     * @return amount accepted by this receiver (may be 0)
      */
-    int put(ItemType type,int amount);
+    int offer(ItemType type, int amount);
 }

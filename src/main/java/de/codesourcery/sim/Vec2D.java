@@ -20,6 +20,10 @@ public class Vec2D
     {
     }
 
+    public Vec2D cpy() {
+        return new Vec2D(this);
+    }
+
     public Vec2D scl(float value) {
         this.x *= value;
         this.y *= value;
@@ -71,7 +75,17 @@ public class Vec2D
         return "("+x+","+y+")";
     }
 
-    public Vec2D clamp (float min, float max)
+    public Vec2D nor()
+    {
+        float len = len();
+        if (len != 0) {
+            x /= len;
+            y /= len;
+        }
+        return this;
+    }
+
+    public Vec2D clamp(float min, float max)
     {
         final float len2 = len2();
         if (len2 == 0f)

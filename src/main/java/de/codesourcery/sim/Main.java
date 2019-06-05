@@ -41,7 +41,7 @@ public class Main extends JFrame
         setLocationRelativeTo( null );
         setVisible( true );
 
-        new Timer( 1000, new ActionListener()
+        new Timer( 500, new ActionListener()
         {
             private long lastTick = -1;
 

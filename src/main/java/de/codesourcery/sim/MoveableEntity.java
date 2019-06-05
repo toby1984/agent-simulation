@@ -1,6 +1,6 @@
 package de.codesourcery.sim;
 
-public class MoveableEntity extends Entity
+public class MoveableEntity extends Entity implements ITickListener
 {
     private static final Vec2D TMP = new Vec2D();
 
@@ -20,6 +20,7 @@ public class MoveableEntity extends Entity
         super( x, y );
     }
 
+    @Override
     public void tick(float deltaSeconds,World world) {
 
         // calculate new acceleration

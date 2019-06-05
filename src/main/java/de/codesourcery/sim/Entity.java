@@ -10,10 +10,31 @@ public class Entity implements IHasPosition
     public final long id = IDS.incrementAndGet();
 
     public final Vec2D position = new Vec2D();
-    public final Vec2D extent = new Vec2D(0.01f,0.01f );
+    public final Vec2D extent = new Vec2D(0.1f,0.1f );
 
     public Entity( Vec2D v) {
         this(v.x,v.y);
+    }
+
+    public boolean contains(Vec2D v) {
+
+        float left = position.x - extent.x/2;
+        if ( v.x < left ) {
+            return false;
+        }
+        float right = position.x + extent.x/2;
+        if ( v.x > right ) {
+            return false;
+        }
+        float top = position.y - extent.y/2;
+        if ( v.y < top ) {
+            return false;
+        }
+        float bottom = position.y + extent.y/2;
+        if ( v.y > bottom ) {
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -37,8 +58,24 @@ public class Entity implements IHasPosition
     }
 
     @Override
-    public Vec2D position()
+    public final Vec2D position()
     {
         return position;
+    }
+
+    public final float dst(Vec2D v) {
+        return position.dst( v );
+    }
+
+    public final float dst2(Vec2D v) {
+        return position.dst2( v );
+    }
+
+    public final float dst(Entity other) {
+        return position.dst( other.position );
+    }
+
+    public final float dst2(Entity other) {
+        return position.dst2( other.position );
     }
 }

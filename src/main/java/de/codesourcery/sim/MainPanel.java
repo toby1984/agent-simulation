@@ -1,6 +1,7 @@
 package de.codesourcery.sim;
 
 import javax.swing.JPanel;
+import javax.swing.ToolTipManager;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Rectangle;
@@ -30,11 +31,18 @@ public class MainPanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 if ( e.getKeyCode() == KeyEvent.VK_R ) { // add robot
-                    System.out.println("Adding robot @ "+viewPosition);
-                    world.add( new Robot(viewPosition) );
+                    final Robot robot = new Robot( viewPosition );
+                    System.out.println("Adding "+robot);
+                    world.add( robot );
                 } else if ( e.getKeyCode() == KeyEvent.VK_F ) { // add factory
-                    System.out.println("Adding factory @ "+viewPosition);
-                    world.add( new Factory(viewPosition) );
+                    final Factory factory = new Factory( viewPosition );
+                    world.add( factory );
+                    System.out.println("Adding "+factory);
+                } else if ( e.getKeyCode() == KeyEvent.VK_D ) { // add depot
+                    final Depot depot = new Depot( viewPosition, ItemType.CONCRETE, ItemType.STONE );
+                    System.out.println("Adding "+depot);
+                    depot.offer( ItemType.STONE, 10 );
+                    world.add( depot );
                 }
             }
         } );
@@ -52,10 +60,18 @@ public class MainPanel extends JPanel
             {
                 mousePosition.set( e.getX(), e.getY() );
                 viewPosition.set( e.getX() / (float) getWidth() , e.getY() / (float) getHeight() );
+
+                final Entity entity = world.getEntityAt( viewPosition );
+                if ( entity != null ) {
+                    setToolTipText( entity.toString() );
+                } else {
+                    setToolTipText( null );
+                }
             }
         };
         addMouseMotionListener( mouseAdapter );
         addMouseListener( mouseAdapter );
+        ToolTipManager.sharedInstance().registerComponent( this );
     }
 
     private final Vec2Di TMP1 = new Vec2Di();
@@ -93,16 +109,23 @@ public class MainPanel extends JPanel
         {
             final Rectangle bounds = getBoundingBox( entity );
 
-            System.out.println("Drawing "+entity+" with bounds "+bounds);
+//            System.out.println("Drawing "+entity+" with bounds "+bounds);
             if ( entity instanceof Factory)
             {
                 // factory -> blue
                 g.setColor( Color.BLUE );
-                g.drawRect( bounds.x , bounds.y ,bounds.width, bounds.height);
-            } else {
+                g.fillRect( bounds.x , bounds.y ,bounds.width, bounds.height);
+            }
+            else if ( entity instanceof Robot )
+            {
                 // robot -> red circle
                 g.setColor( Color.RED );
-                g.drawArc( bounds.x , bounds.y ,bounds.width, bounds.height, 0 , 359);
+                g.fillArc( bounds.x , bounds.y ,bounds.width, bounds.height, 0 , 359);
+            } else {
+                // depot -> black box
+                g.setColor( Color.BLACK );
+                g.fillRect( bounds.x , bounds.y ,bounds.width, bounds.height);
+
             }
         });
     }
