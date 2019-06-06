@@ -1,80 +1,77 @@
 package de.codesourcery.sim;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickListener
 {
     public ItemType[] acceptedItemTypes;
-    public int[] amountByType;
-    public int minAmount=3;
-    public int storedAmount;
+    public int minAmount=0;
     public int capacity =100;
 
     public Depot(Vec2D v, ItemType... acceptedItemTypes)
     {
         super( v );
         this.acceptedItemTypes = acceptedItemTypes;
-        this.amountByType = new int[ acceptedItemTypes.length ];
     }
 
     @Override
     public void tick(float deltaSeconds, World world) {
 
-        int remainingCapacity = capacity - storedAmount;
-        for (int i = 0; remainingCapacity > 0 && i < acceptedItemTypes.length; i++)
+        int remainingCapacity = capacity - availableSpace(world);
+
+        final List<ItemAndAmount> toProcess = world.inventory.getAmounts(this,
+            (type, amount) -> amount < minAmount || amount > 0);
+
+        final Set<ItemType> notSeen = new HashSet<>(List.of(acceptedItemTypes));
+
+        for ( ItemAndAmount item : toProcess )
         {
-            final int availableAmount = amountByType[i];
-            if ( availableAmount < minAmount )
+            final int availableAmount = item.amount;
+            notSeen.remove( item.type );
+
+            if ( availableAmount < minAmount && remainingCapacity > 0 )
             {
-                int toAsk = Math.min( minAmount, remainingCapacity );
+                int toAsk = Math.min( minAmount-availableAmount, remainingCapacity );
                 world.sendMessage(
                         new Message(this,
                                 Message.MessageType.ITEM_NEEDED,
-                                new ItemAndAmount( this.acceptedItemTypes[i],
-                                        toAsk )) );
+                                new ItemAndAmount( item.type, toAsk ),
+                                Message.LOW_PRIORITY
+                        ));
+                remainingCapacity -= toAsk;
             }
             if ( availableAmount > 0 ) {
                 world.sendMessage(
                         new Message(this,
                                 Message.MessageType.ITEM_AVAILABLE,
-                                new ItemAndAmount( this.acceptedItemTypes[i],
-                                        availableAmount )) );
+                                new ItemAndAmount( item.type,availableAmount ),
+                            Message.MEDIUM_PRIORITY
+                        ));
             }
         }
-    }
 
-    @Override
-    public int offer(ItemType type, int amount)
-    {
-        for ( int i =0 ; i < acceptedItemTypes.length ; i++ ) {
-            if ( acceptedItemTypes[i].matches( type ) )
-            {
-                final int slotsAvailable = capacity - storedAmount;
-                final int transferred = Math.min( amount, slotsAvailable );
-                storedAmount += transferred;
-                amountByType[i] += transferred;
-                return transferred;
-            }
-        }
-        return 0;
-    }
-
-    @Override
-    public int take(ItemType type, int amount)
-    {
-        for ( int i =0 ; i < acceptedItemTypes.length ; i++ )
+        if ( minAmount > 0 && remainingCapacity > 0 && ! notSeen.isEmpty() )
         {
-            if ( acceptedItemTypes[i].matches( type ) )
+            for (ItemType t : notSeen )
             {
-                final int available = amountByType[i];
-                if ( available > 0 )
-                {
-                    final int transferred = Math.min( amount, available );
-                    storedAmount -= transferred;
-                    amountByType[i] -= transferred;
-                    return transferred;
+                world.sendMessage(
+                    new Message(this,
+                        Message.MessageType.ITEM_NEEDED,
+                        new ItemAndAmount(t, minAmount),
+                        Message.LOW_PRIORITY
+                    ));
+                remainingCapacity -= minAmount;
+                if ( remainingCapacity <= 0 ) {
+                    break;
                 }
             }
         }
-        return 0;
+    }
+
+    private int availableSpace(World world) {
+        return capacity - world.inventory.getStoredAmount(this );
     }
 
     @Override
@@ -83,11 +80,24 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
         StringBuilder buffer = new StringBuilder();
         for( int i = 0, len= acceptedItemTypes.length ; i < len ; i++)
         {
-             buffer.append( acceptedItemTypes[i]+"x"+amountByType[i] );
+             buffer.append( acceptedItemTypes[i] );
              if ( (i+1) < len ) {
                  buffer.append(",");
              }
         }
         return "Depot #"+id+" {"+buffer+"}";
+    }
+
+    @Override
+    public int getAcceptedAmount(ItemType type, World world) {
+
+        for ( var t : acceptedItemTypes )
+        {
+            if ( t.matches(type ) )
+            {
+                return availableSpace(world);
+            }
+        }
+        return 0;
     }
 }

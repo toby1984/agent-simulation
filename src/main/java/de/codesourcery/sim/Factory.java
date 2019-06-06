@@ -5,8 +5,6 @@ import org.apache.commons.lang3.Validate;
 public class Factory extends Entity implements IItemProvider,IItemReceiver,ITickListener
 {
     public ItemType producedItem = ItemType.CONCRETE;
-
-    public int storedAmount;
     public int maxStorage=10;
 
     public float productionTimeSeconds=5;
@@ -16,7 +14,6 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
 
     public ItemType input1Type = ItemType.STONE;
     public int input1Consumed=1;
-    public int input1Stored=0;
     public int input1MaxAmount=10;
 
     public Factory(Vec2D v)
@@ -29,26 +26,37 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
         super( x, y );
     }
 
+    private int input1Stored(World world) {
+        return world.inventory.getAmount(this, input1Type );
+    }
+
+    private int storedAmount(World world) {
+        return world.inventory.getAmount(this, producedItem);
+    }
+
     public void tick(float elapsedSeconds, World world)
     {
         this.elapsedSeconds += elapsedSeconds;
         if ( this.elapsedSeconds > productionTimeSeconds )
         {
-            if ( input1Stored >= input1Consumed )
+            if ( input1Stored(world) >= input1Consumed )
             {
-                int newAmount = storedAmount + itemsPerCycle;
+                final int newAmount = storedAmount(world) + itemsPerCycle;
                 if ( newAmount <= maxStorage )
                 {
-                    storedAmount += itemsPerCycle;
+                    world.inventory.consume(this,input1Type,input1Consumed);
+                    world.inventory.create(this,producedItem,itemsPerCycle);
                 }
             }
             this.elapsedSeconds -= productionTimeSeconds;
         }
 
+        final int storedAmount = storedAmount(world);
         if ( storedAmount > 0 ) {
-            world.sendMessage( new Message(this, Message.MessageType.ITEM_AVAILABLE, new ItemAndAmount( producedItem, storedAmount ) ) );
+            world.sendMessage( new Message(this, Message.MessageType.ITEM_AVAILABLE,
+                new ItemAndAmount( producedItem, storedAmount ), Message.LOW_PRIORITY ) );
         }
-        final int inputNeeded = input1MaxAmount - input1Stored;
+        final int inputNeeded = input1MaxAmount - input1Stored(world );
         if ( inputNeeded > 0 ) {
             world.sendMessage( new Message(this, Message.MessageType.ITEM_NEEDED,
                     new ItemAndAmount( input1Type, inputNeeded ) ) );
@@ -58,35 +66,16 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
     @Override
     public String toString()
     {
-        return "Factory #"+id+"[ product_stored: " + producedItem + " " + storedAmount + "/" +
-                maxStorage + ", input1_stored: " + input1Type + " " + input1Stored + "/" + input1MaxAmount + " ]";
+        return "Factory #"+id+"[ product_stored: " + producedItem + " (max. " +
+                maxStorage + "), input1_stored: " + input1Type + " (max. " + input1MaxAmount + ") ]";
     }
 
     @Override
-    public int take(ItemType type, int amount)
+    public int getAcceptedAmount(ItemType type, World world)
     {
-        Validate.isTrue( amount > 0 );
-
-        if ( producedItem.matches( type ) )
+        if ( this.input1Type.matches(type ) )
         {
-            final int result = Math.min( amount , storedAmount );
-            storedAmount -= amount;
-            return result;
-        }
-        return 0;
-    }
-
-    @Override
-    public int offer(ItemType type, int amount)
-    {
-        if ( type.matches( input1Type ) ) {
-            int availableSpace = input1MaxAmount - input1Stored;
-            if ( availableSpace > 0 )
-            {
-                final int taken = Math.min(amount,availableSpace);
-                input1Stored += taken;
-                return taken;
-            }
+            return input1MaxAmount - input1Stored(world );
         }
         return 0;
     }

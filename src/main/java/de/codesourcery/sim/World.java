@@ -3,13 +3,22 @@ package de.codesourcery.sim;
 import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class World
 {
-    private static final float BROADCAST_DIST = 1;
-    private static final float BROADCAST_DIST2 = BROADCAST_DIST*BROADCAST_DIST;
+    public static final float BROADCAST_DIST = 0.5f;
+    public static final float BROADCAST_DIST2 = BROADCAST_DIST*BROADCAST_DIST;
+
+    public static final Vec2D BROADCAST_RANGE = new Vec2D(
+        (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST),
+        (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST)
+    );
+
+    public final Inventory inventory = new Inventory();
 
     private final List<Entity> entities = new ArrayList<>();
     private final List<ITickListener> tickListeners = new ArrayList<>();
@@ -48,7 +57,7 @@ public class World
         }
         // assign to controller with highest utilization
         controllers.sort( (a,b) -> Float.compare( b.utilization() ,a.utilization() ) );
-        controllers.get(0).assignRobot( r );
+        controllers.get(0).assignRobot( r, this );
     }
 
     public void tick(float deltaSeconds)
@@ -109,5 +118,25 @@ public class World
             }
         }
         return result;
+    }
+
+    public Depot findClosestDepotThatAccepts(Robot robot,ItemType item, int amount)
+    {
+        List<Depot> candidates = new ArrayList<>();
+        for ( var e : entities )
+        {
+            if ( e instanceof Depot )
+            {
+                final int acceptedAmount = ((Depot) e).getAcceptedAmount(item, this);
+                if ( acceptedAmount > 0 ) {
+                    candidates.add( (Depot) e );
+                }
+            }
+        }
+        if ( candidates.isEmpty() ) {
+            return null;
+        }
+        candidates.sort( (a,b) -> Float.compare( a.dst2(robot) , b.dst2(robot) ) );
+        return candidates.get(0);
     }
 }

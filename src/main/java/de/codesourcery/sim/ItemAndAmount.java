@@ -3,7 +3,7 @@ package de.codesourcery.sim;
 public final class ItemAndAmount
 {
     public final ItemType type;
-    public final int amount;
+    public int amount;
 
     public ItemAndAmount(ItemType type, int amount)
     {

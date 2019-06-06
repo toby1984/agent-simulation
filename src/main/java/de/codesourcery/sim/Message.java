@@ -1,30 +1,54 @@
 package de.codesourcery.sim;
 
+import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Message
 {
     private static final AtomicLong MSG_ID = new AtomicLong();
 
-    public enum MessageType {
-        ITEM_AVAILABLE,
-        ITEM_NEEDED,
-        PICKING_UP,
-        DROPPING_OFF
+    /**
+     * Sorts ascending by priority (first message has highest priority)
+     */
+    public static final Comparator<Message> PRIO_COMPERATOR = (a,b) -> Integer.compare(b.priority,a.priority);
+
+    public static final int LOW_PRIORITY = 0;
+    public static final int MEDIUM_PRIORITY = 1;
+    public static final int HIGH_PRIORITY = 2;
+
+    public static final int DEFAULT_PRIORITY = MEDIUM_PRIORITY;
+
+    public enum MessageKind
+    {
+        OFFER,
+        REQUEST
+    }
+
+    public enum MessageType
+    {
+        ITEM_AVAILABLE(MessageKind.OFFER),
+        ITEM_NEEDED(MessageKind.REQUEST);
+
+        public final MessageKind kind;
+
+        MessageType(MessageKind kind)
+        {
+            this.kind = kind;
+        }
     }
 
     public final long id = MSG_ID.incrementAndGet();
     public final Entity sender;
+    public final int priority;
     public final MessageType type;
     public final Object payload;
-    public final Message replyTo;
 
     public Message(Entity sender, MessageType type)
     {
         this.sender = sender;
         this.type = type;
         this.payload = null;
-        this.replyTo = null;
+        this.priority = DEFAULT_PRIORITY;
     }
 
     public Message(Entity sender, MessageType type, Object payload)
@@ -32,20 +56,15 @@ public class Message
         this.sender = sender;
         this.type = type;
         this.payload = payload;
-        this.replyTo = null;
+        this.priority = DEFAULT_PRIORITY;
     }
 
-    public Message(Entity sender, MessageType type, Object payload, Message replyTo)
+    public Message(Entity sender, MessageType type, Object payload,int priority)
     {
         this.sender = sender;
         this.type = type;
         this.payload = payload;
-        this.replyTo = replyTo;
-    }
-
-    public Message createReply(Entity sender, MessageType type, Object payload)
-    {
-        return new Message(sender,type,payload,this);
+        this.priority = priority;
     }
 
     public final boolean hasType(MessageType t) {
@@ -56,19 +75,15 @@ public class Message
         return (ItemAndAmount) payload;
     }
 
-    public boolean isReplyTo(Message other) {
-        return this.replyTo != null && this.replyTo == other;
-    }
-
     @Override
     public String toString()
     {
         return "Message{" +
                 "id=" + id +
+                ", prio=" + priority +
                 ", type=" + type +
                 ", payload=" + payload +
                 ", sender=" + sender +
-                ", replyTo=" + replyTo +
                 '}';
     }
 }

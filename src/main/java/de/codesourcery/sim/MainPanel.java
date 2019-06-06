@@ -41,8 +41,12 @@ public class MainPanel extends JPanel
                 } else if ( e.getKeyCode() == KeyEvent.VK_D ) { // add depot
                     final Depot depot = new Depot( viewPosition, ItemType.CONCRETE, ItemType.STONE );
                     System.out.println("Adding "+depot);
-                    depot.offer( ItemType.STONE, 10 );
+                    world.inventory.create(depot,ItemType.STONE,10);
                     world.add( depot );
+                } else if ( e.getKeyCode() == KeyEvent.VK_C ) { // add controller
+                    final Controller ctrl = new Controller( viewPosition );
+                    System.out.println("Adding "+ctrl);
+                    world.add( ctrl );
                 }
             }
         } );
@@ -85,10 +89,15 @@ public class MainPanel extends JPanel
         return TMP1;
     }
 
-    private Rectangle getBoundingBox(Entity entity) {
+    private Rectangle getBoundingBox(Entity entity)
+    {
+        return getBoundingBox(entity,entity.extent);
+    }
 
-        float w = getWidth() * entity.extent.x;
-        float h = getHeight() * entity.extent.y;
+    private Rectangle getBoundingBox(Entity entity,Vec2D extent) {
+
+        float w = getWidth() * extent.x;
+        float h = getHeight() * extent.y;
 
         final Vec2Di xy = toWorldCoords( entity.position );
 
@@ -107,7 +116,7 @@ public class MainPanel extends JPanel
 
         world.visitEntities( entity ->
         {
-            final Rectangle bounds = getBoundingBox( entity );
+            Rectangle bounds = getBoundingBox( entity );
 
 //            System.out.println("Drawing "+entity+" with bounds "+bounds);
             if ( entity instanceof Factory)
@@ -115,17 +124,42 @@ public class MainPanel extends JPanel
                 // factory -> blue
                 g.setColor( Color.BLUE );
                 g.fillRect( bounds.x , bounds.y ,bounds.width, bounds.height);
+                g.setColor( Color.BLACK );
+                g.drawString(entity.toString(), bounds.x, bounds.y );
             }
             else if ( entity instanceof Robot )
             {
                 // robot -> red circle
                 g.setColor( Color.RED );
                 g.fillArc( bounds.x , bounds.y ,bounds.width, bounds.height, 0 , 359);
-            } else {
+                g.setColor( Color.BLACK );
+                final Robot r = (Robot) entity;
+                if ( r.isBusy() )
+                {
+                    String carrying = "nothing";
+                    if ( r.carriedItem(world) != null ) {
+                        carrying = r.carriedItem(world)+"x"+r.carriedAmount(world);
+                    }
+                    g.drawString("Busy ("+carrying+")", bounds.x, bounds.y );
+                } else {
+                    g.drawString("Idle", bounds.x, bounds.y );
+                }
+            } else if ( entity instanceof Depot ) {
                 // depot -> black box
                 g.setColor( Color.BLACK );
                 g.fillRect( bounds.x , bounds.y ,bounds.width, bounds.height);
-
+                g.setColor( Color.BLACK );
+                g.drawString(entity.toString(), bounds.x, bounds.y );
+            } else if ( entity instanceof Controller ) {
+                // controller green box
+                g.setColor( Color.GREEN );
+                g.fillRect( bounds.x , bounds.y ,bounds.width, bounds.height);
+                g.setColor( Color.BLACK );
+                g.drawString(entity.toString(), bounds.x, bounds.y );
+                // draw broadcast range
+                bounds = getBoundingBox(entity, World.BROADCAST_RANGE );
+                g.setColor( Color.GREEN );
+                g.drawArc( bounds.x , bounds.y ,bounds.width, bounds.height, 0 , 359);
             }
         });
     }

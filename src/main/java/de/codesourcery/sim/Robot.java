@@ -1,190 +1,118 @@
 package de.codesourcery.sim;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
-public class Robot extends MoveableEntity
+public class Robot extends MoveableEntity implements IItemReceiver
 {
     private static final float PICKUP_DIST = 0.1f;
     private static final float PICKUP_DIST2 = PICKUP_DIST*PICKUP_DIST;
 
-    public State nextState = new IdleState();
-    public State currentState = null;
-    public ItemType carriedItem;
-    public int carriedAmount;
+    public State currentState = new IdleState();
     public int maxCarryingCapacity = 1;
     public Controller controller;
-
-    private List<Message> inbox = new ArrayList<>();
 
     private abstract class State {
 
         public void onEnter(World world) { }
 
+        public void onExit(World world) { }
+
         public abstract State tick(float deltaSeconds,World world);
+
+        public void receive(Message message) {
+        }
     }
 
-    private final class PreparePickupState extends State
+    private final class TransferState extends State
     {
-        private final Message request;
-        private int randomDelay = 3;
-        private int pickedUpByOtherRobots;
+        private final Entity src;
+        private final ItemAndAmount details;
+        private final Entity dst;
 
-        private PreparePickupState(Message incomingMessage)
-        {
-            this.request = incomingMessage;
-            randomDelay = 1+new Random().nextInt( 10 );
+        private boolean pickingUp = true;
+        private State current;
+
+        public TransferState(Entity src, ItemAndAmount details, Entity dst) {
+
+            this.src = src;
+            this.dst = dst;
+            this.details = details;
+            current = new MoveToLocationState( src.position(), new PickupState(src,details) );
         }
 
         @Override
         public String toString()
         {
-            return "PREPARE_PICKUP[ delay: "+randomDelay+", pickedUpByOthers: "+
-                    pickedUpByOtherRobots+", reply_to: "+request+" ]";
-        }
-
-        @Override
-        public void onEnter(World world)
-        {
-            final int amount = maxCarryingCapacity - carriedAmount;
-            world.sendMessage(
-                    request.createReply( Robot.this,Message.MessageType.PICKING_UP, new ItemAndAmount( request.getItemAndAmount().type, amount )) );
+            return "TRANSFER[ "+details+" from "+src+" to "+dst;
         }
 
         @Override
         public State tick(float deltaSeconds, World world)
         {
-            // check whether other robots also responded and if yes, how many items they're picking up
-            for ( Message msg : inbox )
+            State next = current.tick(deltaSeconds,world );
+            if ( next != current )
             {
-                if ( msg.hasType( Message.MessageType.PICKING_UP ) &&
-                        msg.isReplyTo( request ) )
+                if ( next instanceof IdleState )
                 {
-                    pickedUpByOtherRobots += msg.getItemAndAmount().amount;
+                    if (!pickingUp)
+                    {
+                        return next;
+                    }
+                    pickingUp = false;
+                    next = new MoveToLocationState(dst.position(), new DropOffState(dst,details) );
                 }
             }
-            inbox.clear();
-            if ( pickedUpByOtherRobots >= request.getItemAndAmount().amount ) {
-                return new IdleState();
-            }
-            if ( --randomDelay == 0 ) {
-                // timeout elapsed, pick up items for real
-                return new MoveToLocationState( request.sender.position(),
-                        new PickupState( request ) );
-            }
-            return this;
-        }
-    }
-
-    private final class PrepareDropOffState extends State
-    {
-        private final Message request;
-        private int randomDelay = 3;
-        private int droppedByOtherRobots;
-
-        private PrepareDropOffState(Message incomingMessage)
-        {
-            this.request = incomingMessage;
-            randomDelay = 1+new Random().nextInt( 10 );
-        }
-
-        @Override
-        public String toString()
-        {
-            return "PREPARE_DROPOFF[ delay: "+randomDelay+", droppedByOthers: "+
-                    droppedByOtherRobots+", reply_to: "+request+" ]";
-        }
-
-        @Override
-        public void onEnter(World world)
-        {
-            final int amount = Math.min( request.getItemAndAmount().amount, carriedAmount);
-            world.sendMessage(
-                    request.createReply( Robot.this,Message.MessageType.DROPPING_OFF,
-                            new ItemAndAmount( request.getItemAndAmount().type, amount )) );
-        }
-
-        @Override
-        public State tick(float deltaSeconds, World world)
-        {
-            // check whether other robots also responded and if yes, how many items they're picking up
-            for ( Message msg : inbox )
-            {
-                if ( msg.hasType( Message.MessageType.DROPPING_OFF ) &&
-                     msg.isReplyTo( request ) )
-                {
-                    droppedByOtherRobots += msg.getItemAndAmount().amount;
-                }
-            }
-            inbox.clear();
-            if ( droppedByOtherRobots >= request.getItemAndAmount().amount ) {
-                return new IdleState();
-            }
-            if ( --randomDelay == 0 ) {
-                // timeout elapsed, pick up items for real
-                return new MoveToLocationState(request.sender.position(), new DropOffState( request ) );
-            }
+            current = next;
             return this;
         }
     }
 
     private final class PickupState extends State {
 
-        private final Message request;
+        private final Entity entity;
+        private final ItemAndAmount details;
 
-        private PickupState(Message request)
+        private PickupState(Entity entity, ItemAndAmount details)
         {
-            this.request = request;
+            this.entity = entity;
+            this.details = details;
         }
 
         @Override
         public String toString()
         {
-            return "PICKUP[ reply_to: "+request+" ]";
+            return "PICKUP[ "+details+" from "+entity+" ]";
         }
 
         @Override
         public State tick(float deltaSeconds, World world)
         {
-            int toTake = Math.min( maxCarryingCapacity - carriedAmount , request.getItemAndAmount().amount );
-            int taken = ((IItemProvider) request.sender).take(request.getItemAndAmount().type, toTake );
-            if ( taken > 0 )
-            {
-                carriedAmount += taken;
-                carriedItem = request.getItemAndAmount().type;
-            }
+            final int toTake = Math.min( maxCarryingCapacity - carriedAmount(world) , details.amount );
+            world.inventory.transfer(entity,details.type,toTake,Robot.this,world);
             return new IdleState();
         }
     }
 
     private final class DropOffState extends State {
 
-        private final Message request;
+        private final Entity entity;
+        private final ItemAndAmount details;
 
-        private DropOffState(Message request)
+        private DropOffState(Entity entity, ItemAndAmount details)
         {
-            this.request = request;
+            this.entity = entity;
+            this.details = details;
         }
 
         @Override
         public String toString()
         {
-            return "DROP_OFF[ reply_to: "+request+" ]";
+            return "DROP_OFF[ "+details+" at "+entity+" ]";
         }
 
         @Override
         public State tick(float deltaSeconds, World world)
         {
-            int toGive = Math.min( carriedAmount , request.getItemAndAmount().amount );
-            int accepted = ((IItemReceiver) request.sender).offer(request.getItemAndAmount().type, toGive );
-            if ( accepted > 0 )
-            {
-                carriedAmount -= accepted;
-                if ( carriedAmount == 0 ) {
-                    carriedItem = null;
-                }
-            }
+            int toGive = Math.min( carriedAmount(world) , details.amount );
+            world.inventory.transfer(Robot.this, carriedItem(world), toGive,entity, world);
             return new IdleState();
         }
     }
@@ -211,7 +139,7 @@ public class Robot extends MoveableEntity
         {
             // move towards target
             final Vec2D delta = destination.cpy().sub( position() ).nor();
-            delta.scl( 0.05f*deltaSeconds);
+            delta.scl( 0.2f*deltaSeconds);
             position.add( delta );
             if ( position.dst2( destination ) <= PICKUP_DIST2 ) {
                 return stateAtDestination;
@@ -222,6 +150,8 @@ public class Robot extends MoveableEntity
 
     public final class IdleState extends State
     {
+        private State nextState = this;
+
         @Override
         public String toString()
         {
@@ -229,45 +159,38 @@ public class Robot extends MoveableEntity
         }
 
         @Override
+        public void onEnter(World world)
+        {
+            controller.busyStateChanged(Robot.this, world );
+        }
+
+        @Override
+        public void onExit(World world)
+        {
+            controller.busyStateChanged(Robot.this, world );
+        }
+
+        @Override
+        public void receive(Message msg)
+        {
+            if ( msg.hasType( Message.MessageType.ITEM_NEEDED) )
+            {
+                nextState = new MoveToLocationState(msg.sender.position, new DropOffState(
+                    msg.sender,msg.getItemAndAmount()));
+            }
+            else if ( msg.hasType( Message.MessageType.ITEM_AVAILABLE ) )
+            {
+                nextState = new MoveToLocationState( msg.sender.position,
+                    new PickupState( msg.sender, msg.getItemAndAmount() ) );
+            } else {
+                throw new IllegalArgumentException("Message not understood: "+msg);
+            }
+        }
+
+        @Override
         public State tick(float deltaSeconds, World world)
         {
-            if ( inbox.isEmpty() ) {
-                return this;
-            }
-            if ( carriedAmount > 0 )
-            {
-                // look for "drop off" messages
-                for ( Message msg : inbox )
-                {
-                    if ( msg.hasType( Message.MessageType.ITEM_NEEDED) )
-                    {
-                        final ItemAndAmount it = msg.getItemAndAmount();
-                        if ( it.hasType( carriedItem ) )
-                        {
-                            inbox.clear();
-                            return new PrepareDropOffState( msg );
-                        }
-                    }
-                }
-            } else {
-                // look for "pick up" messages
-                for ( Message msg : inbox )
-                {
-                    if ( msg.hasType( Message.MessageType.ITEM_AVAILABLE ) )
-                    {
-                        final ItemAndAmount it = msg.getItemAndAmount();
-                        if ( carriedItem == null ||
-                                availableCarryingCapacity() > 0 &&
-                              it.hasType( carriedItem ) )
-                        {
-                            inbox.clear();
-                            return new PreparePickupState( msg );
-                        }
-                    }
-                }
-            }
-            inbox.clear();
-            return this;
+            return nextState;
         }
     }
 
@@ -281,41 +204,80 @@ public class Robot extends MoveableEntity
         super( x, y );
     }
 
-    public int availableCarryingCapacity()
-    {
-        return maxCarryingCapacity - carriedAmount;
-    }
-
     @Override
     public String toString()
     {
-        final String carrying = carriedItem == null ? "<nothing>" : carriedItem+"x"+carriedAmount+"/"+maxCarryingCapacity;
-        return "Robot #"+id+" [ "+carrying+" ] = { pos: "+position+" , vel: "+velocity+", accel: "+acceleration+" }";
+        return "Robot #"+id;
     }
 
     @Override
     public void tick(float deltaSeconds,World world)
     {
-        if ( nextState != currentState ) {
-            currentState = nextState;
-            System.out.println( this+" is now in state "+currentState);
-            currentState.onEnter( world );
-        }
-        else
+        State nextState = currentState.tick( deltaSeconds, world );
+        if ( nextState != currentState )
         {
-            nextState = currentState.tick( deltaSeconds, world );
+            System.out.println( this+" transitioning "+currentState+" -> "+nextState);
+            currentState.onExit(world );
+            this.currentState = nextState;
+            nextState.onEnter(world);
         }
+    }
+
+    public boolean isIdle() {
+        return ! isBusy();
+    }
+
+    public boolean isBusy() {
+        return !(this.currentState instanceof IdleState);
+    }
+
+    public boolean isEmpty(World world) {
+        return carriedAmount(world) == 0;
+    }
+
+    public ItemType carriedItem(World world)
+    {
+        return world.inventory.visitInventory(this, (itemType,amount,ctx) ->
+        {
+            ctx.stop(itemType);
+        }, null);
+    }
+
+    public ItemAndAmount carriedItemAndAmount(World world)
+    {
+        return world.inventory.visitInventory(this, (itemType,amount,ctx) ->
+        {
+            ctx.stop(new ItemAndAmount(itemType, amount));
+        }, null);
+    }
+
+    public void transfer(Entity src,ItemAndAmount details,Entity dst)
+    {
+        if ( isBusy() ) {
+            throw new IllegalStateException("Busy robot "+this+" in state "+currentState+" cannot transfer stuff");
+        }
+        currentState = new TransferState(src,details,dst);
     }
 
     public void receive(Message msg) {
-        this.inbox.add(msg);
-    }
-
-    public void receive(List<Message> msgs) {
-        this.inbox.addAll(msgs);
+        currentState.receive(msg);
     }
 
     public boolean hasController() {
         return this.controller != null;
+    }
+
+    public int carriedAmount(World world) {
+        return world.inventory.getStoredAmount(this);
+    }
+
+    @Override
+    public int getAcceptedAmount(ItemType type, World world)
+    {
+        final ItemAndAmount itemAndAmount = carriedItemAndAmount(world);
+        if ( itemAndAmount == null || itemAndAmount.amount == 0 ) {
+            return maxCarryingCapacity;
+        }
+        return maxCarryingCapacity - itemAndAmount.amount;
     }
 }
