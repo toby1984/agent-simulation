@@ -1,7 +1,5 @@
 package de.codesourcery.sim;
 
-import org.apache.commons.lang3.Validate;
-
 public class Factory extends Entity implements IItemProvider,IItemReceiver,ITickListener
 {
     public ItemType producedItem = ItemType.CONCRETE;

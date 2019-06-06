@@ -1,11 +1,7 @@
 package de.codesourcery.sim;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
-
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 public class World

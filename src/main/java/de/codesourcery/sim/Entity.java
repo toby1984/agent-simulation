@@ -1,6 +1,5 @@
 package de.codesourcery.sim;
 
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
