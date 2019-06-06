@@ -61,8 +61,7 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
     @Override
     public String toString()
     {
-        return "Factory #"+id+"[ product_stored: " + producedItem + " (max. " +
-                maxStorage + "), input1_stored: " + input1Type + " (max. " + input1MaxAmount + ") ]";
+        return "Factory #"+id+"[ "+input1Consumed+" "+input1Type+" -> "+itemsPerCycle+" "+producedItem+" ]";
     }
 
     @Override

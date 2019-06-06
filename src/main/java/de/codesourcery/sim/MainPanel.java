@@ -177,6 +177,13 @@ public class MainPanel extends JPanel
         return TMP1;
     }
 
+    private Vec2Di modelToViewNoTranslate(Vec2D v)
+    {
+        TMP1.x = (int) ((v.x /viewPort.x) * getWidth());
+        TMP1.y = (int) ((v.y /viewPort.y) * getHeight());
+        return TMP1;
+    }
+
     private Rectangle getBoundingBox(Entity entity)
     {
         return getBoundingBox( entity, entity.extent );
@@ -184,8 +191,9 @@ public class MainPanel extends JPanel
 
     private Rectangle getBoundingBox(Entity entity, Vec2D extent)
     {
-        float w = getWidth() * extent.x;
-        float h = getHeight() * extent.y;
+        Vec2Di resized = modelToViewNoTranslate(extent);
+        float w = resized.x;
+        float h = resized.y;
 
         final Vec2Di xy = modelToView( entity.position );
 
@@ -217,7 +225,7 @@ public class MainPanel extends JPanel
             {
                 // robot -> red circle
                 g.setColor( Color.RED );
-                g.fillArc( bounds.x, bounds.y, bounds.width, bounds.height, 0, 359 );
+                g.fillArc( bounds.x, bounds.y, bounds.width, bounds.height, 0, 360 );
                 g.setColor( Color.BLACK );
             }
             else if ( entity instanceof Depot )
@@ -234,7 +242,7 @@ public class MainPanel extends JPanel
                 // draw broadcast range
                 bounds = getBoundingBox( entity, Controller.BROADCAST_RANGE );
                 g.setColor( Color.GREEN );
-                g.drawArc( bounds.x, bounds.y, bounds.width, bounds.height, 0, 359 );
+                g.drawArc( bounds.x, bounds.y, bounds.width, bounds.height, 0, 360 );
             }
         } );
     }
