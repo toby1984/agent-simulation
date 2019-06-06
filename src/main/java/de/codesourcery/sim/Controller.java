@@ -9,10 +9,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 public class Controller extends Entity implements ITickListener
 {
+    public static final float BROADCAST_DIST = 0.5f;
+    public static final float BROADCAST_DIST2 = BROADCAST_DIST*BROADCAST_DIST;
+
+    public static final Vec2D BROADCAST_RANGE = new Vec2D(
+            (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST),
+            (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST)
+    );
+
     private final List<Message> offers = new ArrayList<>();
 
     private final List<Message> requests = new ArrayList<>();
@@ -195,5 +202,14 @@ public class Controller extends Entity implements ITickListener
     {
         return "Controller #"+id+" [ "+busy.size()+" busy, "+idleCarrying.size()+" idle carrying, "+
                    idleEmpty.size()+" idle empty, "+(utilization()*100)+"% busy ]";
+    }
+
+    public boolean isInRange(Vec2D v) {
+        return dst2( v ) <= BROADCAST_DIST2;
+    }
+
+    public boolean isInRange(Entity entity)
+    {
+        return isInRange( entity.position );
     }
 }

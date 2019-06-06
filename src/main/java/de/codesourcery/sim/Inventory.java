@@ -1,5 +1,10 @@
 package de.codesourcery.sim;
 
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.longs.Long2IntArrayMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,28 +12,27 @@ import java.util.Map;
 
 public class Inventory
 {
-    private Map<ItemType, Map<Long,Integer>> amountsByType = new HashMap<>();
-    private Map<Long, Map<ItemType,Integer>> itemsByEntity = new HashMap<>();
+    private Map<ItemType, Long2IntArrayMap> amountsByType = new HashMap<>();
+
+    private Long2ObjectArrayMap<Object2IntArrayMap<ItemType>> itemsByEntity = new Long2ObjectArrayMap<>();
 
     public interface IInventoryPredicate
     {
         boolean test(ItemType type,int amount);
     }
 
-    public static abstract class IterationContext
+    public static final class IterationContext
     {
-        public boolean stop;
-        public Object result;
+        boolean stop;
+        Object result;
 
-        public void stop(Object result) {
+        void stop(Object result) {
             this.result = result;
         }
 
         public void stop() {
             this.stop = true;
         }
-
-        public abstract long getOwningEntityId();
     }
 
     public interface IInventoryVisitor<T>
@@ -47,22 +51,22 @@ public class Inventory
     {
         final StringBuilder buffer = new StringBuilder();
         buffer.append("-------------------------------\n");
-        for (Map.Entry<ItemType, Map<Long, Integer>> entry : amountsByType.entrySet())
+        for (Map.Entry<ItemType, Long2IntArrayMap> entry : amountsByType.entrySet())
         {
             int sum = entry.getValue().values().stream().reduce(0, Integer::sum);
             buffer.append(entry.getKey()).append(" x ").append(sum).append("\n");
         }
         buffer.append("-------------------------------\n");
-        for ( var entry : itemsByEntity.entrySet() )
+        for ( var entry : itemsByEntity.long2ObjectEntrySet() )
         {
-            final Long entityId = entry.getKey();
+            final long entityId = entry.getLongKey();
             buffer.append("Entity #").append(entityId).append(":\n");
-            final Map<ItemType, Integer> items = entry.getValue();
-            for (Map.Entry<ItemType, Integer> item : items.entrySet())
+            final Object2IntArrayMap<ItemType> items = entry.getValue();
+            for (var item : items.object2IntEntrySet() )
             {
-                if ( item.getValue() > 0 )
+                if ( item.getIntValue() > 0 )
                 {
-                    buffer.append("     ").append(item.getKey()).append(" x ").append(item.getValue()).append("\n");
+                    buffer.append("     ").append(item.getKey()).append(" x ").append(item.getIntValue()).append("\n");
                 }
             }
         }
@@ -83,22 +87,21 @@ public class Inventory
 
     public int getAmount(Entity entity,ItemType type)
     {
-        final Map<ItemType, Integer> map = itemsByEntity.get(entity.id);
+        final Object2IntArrayMap<ItemType> map = itemsByEntity.get( entity.id );
         if ( map != null ) {
-            Integer amount = map.get( type );
-            return amount == null ? 0 : amount;
+            return map.getInt( type );
         }
         return 0;
     }
 
     public int getStoredAmount(Entity entity)
     {
-        final Map<ItemType, Integer> map = itemsByEntity.get(entity.id);
+        final Object2IntArrayMap<ItemType> map = itemsByEntity.get( entity.id );
         int result = 0;
         if ( map != null )
         {
-            for ( Integer v : map.values() ) {
-                result += v;
+            for (IntIterator it = map.values().iterator() ; it.hasNext() ;  ) {
+                result += it.nextInt();
             }
         }
         return result;
@@ -106,16 +109,17 @@ public class Inventory
 
     public List<ItemAndAmount> getAmounts(Entity entity)
     {
-        final Map<ItemType, Integer> map = itemsByEntity.get(entity.id);
+        final Object2IntArrayMap<ItemType> map = itemsByEntity.get(entity.id);
         if ( map == null ) {
             return new ArrayList<>();
         }
         final List<ItemAndAmount> result = new ArrayList<>();
-        for (Map.Entry<ItemType, Integer> entry : map.entrySet() )
+        for (var entry : map.object2IntEntrySet() )
         {
-            if (entry.getValue() > 0 )
+            final int amount = entry.getIntValue();
+            if ( amount > 0 )
             {
-                result.add(new ItemAndAmount(entry.getKey(), entry.getValue()));
+                result.add(new ItemAndAmount(entry.getKey(), amount));
             }
         }
         return result;
@@ -123,26 +127,20 @@ public class Inventory
 
     public <T> T visitInventory(Entity entity, IInventoryVisitor<T> visitor,T defaultValue)
     {
-        final Map<ItemType, Integer> map = itemsByEntity.get(entity.id);
+        final Object2IntArrayMap<ItemType> map = itemsByEntity.get( entity.id );
         if ( map == null )
         {
             return defaultValue;
         }
 
-        final long id = entity.id;
-        final IterationContext ctx = new IterationContext()
+        final IterationContext ctx = new IterationContext();
+
+        for (var entry : map.object2IntEntrySet() )
         {
-            @Override
-            public long getOwningEntityId()
+            int amount = entry.getIntValue();
+            if ( amount > 0 )
             {
-                return id;
-            }
-        };
-        for (Map.Entry<ItemType, Integer> entry : map.entrySet() )
-        {
-            if (entry.getValue() > 0 )
-            {
-                visitor.visit(entry.getKey(), entry.getValue(), ctx);
+                visitor.visit(entry.getKey(), amount, ctx);
                 if (ctx.stop)
                 {
                     break;
@@ -154,16 +152,17 @@ public class Inventory
 
     public List<ItemAndAmount> getAmounts(Entity entity, IInventoryPredicate predicate)
     {
-        final Map<ItemType, Integer> map = itemsByEntity.get(entity.id);
+        final Object2IntArrayMap<ItemType> map = itemsByEntity.get( entity.id );
         if ( map == null ) {
             return new ArrayList<>();
         }
         final List<ItemAndAmount> result = new ArrayList<>();
-        for (Map.Entry<ItemType, Integer> entry : map.entrySet() )
+        for ( var entry : map.object2IntEntrySet() )
         {
-            if (entry.getValue() > 0 && predicate.test(entry.getKey(), entry.getValue()))
+            int value = entry.getIntValue();
+            if ( value > 0 && predicate.test(entry.getKey(), value ) )
             {
-                result.add(new ItemAndAmount(entry.getKey(), entry.getValue()));
+                result.add(new ItemAndAmount(entry.getKey(), value ));
             }
         }
         return result;
@@ -172,27 +171,25 @@ public class Inventory
     private void apply(Entity location,ItemType type,int amount)
     {
         // update amountsByType
-        Map<Long, Integer> byEntity = amountsByType.get(type);
+        Long2IntArrayMap byEntity = amountsByType.get(type);
         if ( byEntity == null )
         {
-            byEntity = new HashMap<>();
+            byEntity = new Long2IntArrayMap();
             amountsByType.put( type, byEntity );
         }
-        Integer currentAmount = byEntity.get(location.id);
-        int newValue = currentAmount == null ? amount : currentAmount + amount;
+        int newValue = byEntity.get(location.id) + amount;
         if ( newValue < 0 ) {
             throw new IllegalStateException("Error when adding "+amount+" x "+type+" to "+location+": Amount must not go negative");
         }
         byEntity.put(location.id, newValue);
 
         // update itemsByEntity
-        Map<ItemType, Integer> byType = itemsByEntity.get(location.id);
+        Object2IntArrayMap<ItemType> byType = itemsByEntity.get(location.id);
         if ( byType == null ) {
-            byType = new HashMap<>();
+            byType = new Object2IntArrayMap<>();
             itemsByEntity.put(location.id,byType);
         }
-        currentAmount = byType.get( type );
-        newValue = currentAmount == null ? amount : currentAmount + amount;
+        newValue = byType.getInt( type ) + amount;
         if ( newValue < 0 ) {
             throw new IllegalStateException("Error when adding "+amount+" x "+type+" to "+location+": Amount must not go negative");
         }
@@ -210,19 +207,19 @@ public class Inventory
         }
     }
 
-    public int transfer(Entity from, ItemType type,int amount,Entity to, World world)
+    public void transfer(Entity from, ItemType type,int amount,Entity to, World world)
     {
         try
         {
             final int acceptedAmount = ((IItemReceiver) to).getAcceptedAmount(type, world);
-            final int toTransfer = Math.min( amount, acceptedAmount );
+            final int availableAmount = getAmount( from,type );
+            final int toTransfer = Math.min( availableAmount , Math.min( amount, acceptedAmount ) );
             if ( toTransfer > 0 )
             {
-                consume(from, type, amount);
-                create(to, type, amount);
+                consume(from, type, toTransfer);
+                create(to, type, toTransfer);
                 stateChanged();
             }
-            return toTransfer;
         }
         catch(IllegalStateException e)
         {

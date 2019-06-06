@@ -157,7 +157,7 @@ public class MainPanel extends JPanel
                 g.setColor( Color.BLACK );
                 g.drawString(entity.toString(), bounds.x, bounds.y );
                 // draw broadcast range
-                bounds = getBoundingBox(entity, World.BROADCAST_RANGE );
+                bounds = getBoundingBox(entity, Controller.BROADCAST_RANGE );
                 g.setColor( Color.GREEN );
                 g.drawArc( bounds.x , bounds.y ,bounds.width, bounds.height, 0 , 359);
             }

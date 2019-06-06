@@ -10,22 +10,11 @@ import java.util.function.Consumer;
 
 public class World
 {
-    public static final float BROADCAST_DIST = 0.5f;
-    public static final float BROADCAST_DIST2 = BROADCAST_DIST*BROADCAST_DIST;
-
-    public static final Vec2D BROADCAST_RANGE = new Vec2D(
-        (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST),
-        (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST)
-    );
-
     public final Inventory inventory = new Inventory();
 
     private final List<Entity> entities = new ArrayList<>();
     private final List<ITickListener> tickListeners = new ArrayList<>();
-    private final List<Robot> robots = new ArrayList<>();
     private final List<Controller> controllers = new ArrayList<>();
-
-    public long frameCounter;
 
     public void add( Entity entity )
     {
@@ -36,7 +25,6 @@ public class World
             {
                 assignToController( r );
             }
-            robots.add( (Robot) entity );
         }
 
         this.entities.add( entity );
@@ -62,7 +50,6 @@ public class World
 
     public void tick(float deltaSeconds)
     {
-        frameCounter++;
         tickListeners.forEach( e -> e.tick( deltaSeconds , this ) );
     }
 
@@ -75,14 +62,15 @@ public class World
     {
         boolean send = false;
 
-        for ( Controller c : controllers )
+        for (int i = 0, controllersSize = controllers.size(); i < controllersSize; i++)
         {
-            if ( c.dst2( msg.sender ) <= BROADCAST_DIST2 ) {
+            final Controller c = controllers.get( i );
+            if ( c.isInRange( msg.sender ) )
+            {
                 c.broadcast( msg );
                 send = true;
             }
         }
-
         if ( ! send ) {
             System.err.println("No controller in range, message lost: "+msg);
         }
@@ -90,20 +78,12 @@ public class World
 
     public Entity getEntityAt(Vec2D position)
     {
-        for ( Entity e : entities )
+        for (int i = 0, entitiesSize = entities.size(); i < entitiesSize; i++)
         {
-            if ( e.contains( position ) ) {
+            Entity e = entities.get( i );
+            if ( e.contains( position ) )
+            {
                 return e;
-            }
-        }
-        return null;
-    }
-
-    private Controller findControllerInRange(Vec2D pos)
-    {
-        for ( Controller c : controllers ) {
-            if ( c.dst2( pos ) <= BROADCAST_DIST2 ) {
-                return c;
             }
         }
         return null;
@@ -113,7 +93,7 @@ public class World
     {
         final List<Controller> result = new ArrayList<>();
         for ( Controller c : controllers ) {
-            if ( c.dst2( pos ) <= BROADCAST_DIST2 ) {
+            if ( c.isInRange( pos ) ) {
                 result.add( c );
             }
         }
@@ -122,7 +102,7 @@ public class World
 
     public Depot findClosestDepotThatAccepts(Robot robot,ItemType item, int amount)
     {
-        List<Depot> candidates = new ArrayList<>();
+        final List<Depot> candidates = new ArrayList<>();
         for ( var e : entities )
         {
             if ( e instanceof Depot )
