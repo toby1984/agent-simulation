@@ -229,6 +229,9 @@ public class Inventory
     }
 
     private void stateChanged() {
-        System.out.println( toString() );
+        if ( Main.DEBUG )
+        {
+            System.out.println( toString() );
+        }
     }
 }

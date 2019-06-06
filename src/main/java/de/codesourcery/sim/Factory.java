@@ -7,7 +7,7 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
     public ItemType producedItem = ItemType.CONCRETE;
     public int maxStorage=10;
 
-    public float productionTimeSeconds=5;
+    public float productionTimeSeconds=2;
     public int itemsPerCycle = 1;
 
     public float elapsedSeconds;
@@ -19,11 +19,6 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
     public Factory(Vec2D v)
     {
         super( v );
-    }
-
-    public Factory(float x, float y)
-    {
-        super( x, y );
     }
 
     private int input1Stored(World world) {

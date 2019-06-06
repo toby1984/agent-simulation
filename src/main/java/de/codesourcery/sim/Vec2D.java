@@ -1,5 +1,7 @@
 package de.codesourcery.sim;
 
+import java.util.Random;
+
 public class Vec2D
 {
     public float x,y;
@@ -27,6 +29,12 @@ public class Vec2D
     public Vec2D scl(float value) {
         this.x *= value;
         this.y *= value;
+        return this;
+    }
+
+    public Vec2D add(float dx,float dy) {
+        x += dx;
+        y += dy;
         return this;
     }
 
@@ -110,5 +118,12 @@ public class Vec2D
         this.x = v.x;
         this.y = v.y;
         return this;
+    }
+
+    public Vec2D randomize(float len, Random rnd)
+    {
+        x = rnd.nextFloat()-0.5f;
+        y = rnd.nextFloat()-0.5f;
+        return nor().scl(len);
     }
 }

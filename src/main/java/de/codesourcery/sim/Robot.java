@@ -197,11 +197,7 @@ public class Robot extends MoveableEntity implements IItemReceiver
     public Robot(Vec2D v)
     {
         super( v );
-    }
-
-    public Robot(float x, float y)
-    {
-        super( x, y );
+        extent.set(0.05f,0.05f);
     }
 
     @Override
@@ -216,7 +212,10 @@ public class Robot extends MoveableEntity implements IItemReceiver
         State nextState = currentState.tick( deltaSeconds, world );
         if ( nextState != currentState )
         {
-            System.out.println( this+" transitioning "+currentState+" -> "+nextState);
+            if ( Main.DEBUG )
+            {
+                System.out.println( this + " transitioning " + currentState + " -> " + nextState );
+            }
             currentState.onExit(world );
             this.currentState = nextState;
             nextState.onEnter(world);

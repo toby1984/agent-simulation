@@ -11,7 +11,7 @@ public class Entity implements IHasPosition
     public final long id = IDS.incrementAndGet();
 
     public final Vec2D position = new Vec2D();
-    public final Vec2D extent = new Vec2D(0.1f,0.1f );
+    public final Vec2D extent = new Vec2D(0.05f,0.05f );
 
     public Entity( Vec2D v) {
         this(v.x,v.y);

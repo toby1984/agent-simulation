@@ -1,5 +1,11 @@
 package de.codesourcery.sim;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
+import it.unimi.dsi.fastutil.longs.LongArraySet;
+import it.unimi.dsi.fastutil.longs.LongIterator;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,19 +30,14 @@ public class Controller extends Entity implements ITickListener
 
     private final List<Message> requests = new ArrayList<>();
 
-    private final Map<Long,Robot> robots = new HashMap<>();
-    private final Set<Long> busy = new HashSet<>();
-    private final Set<Long> idleEmpty =  new HashSet<>();
-    private final Set<Long> idleCarrying =  new HashSet<>();
+    private final Long2ObjectArrayMap<Robot> robots = new Long2ObjectArrayMap<>();
+    private final LongArraySet busy = new LongArraySet();
+    private final LongArraySet idleEmpty =  new LongArraySet();
+    private final LongArraySet idleCarrying =  new LongArraySet();
 
     public Controller(Vec2D v)
     {
         super( v );
-    }
-
-    public Controller(float x, float y)
-    {
-        super( x, y );
     }
 
     public void broadcast(Message msg) {
@@ -63,13 +64,14 @@ public class Controller extends Entity implements ITickListener
     @Override
     public void tick(float deltaSeconds, World world)
     {
+        // sort requests descending by priority
         requests.sort(Message.PRIO_COMPERATOR);
 
         // try to serve requests using idle robots carrying items first
         // so they can be used for other tasks
-        for (Iterator<Long> robotIterator = idleCarrying.iterator(); robotIterator.hasNext(); )
+        for (LongIterator robotIterator = idleCarrying.iterator(); robotIterator.hasNext(); )
         {
-            final Long id = robotIterator.next();
+            final long id = robotIterator.nextLong();
             final Robot robot = robots.get(id);
             final ItemType carried = robot.carriedItem(world);
             for (Iterator<Message> requestIterator = requests.iterator(); requestIterator.hasNext(); )
@@ -78,7 +80,9 @@ public class Controller extends Entity implements ITickListener
                 if ( msg.getItemAndAmount().hasType( carried ) )
                 {
                     robot.receive(msg);
+
                     busy.add( robot.id );
+
                     requestIterator.remove();
                     robotIterator.remove();
                     break;
@@ -86,17 +90,17 @@ public class Controller extends Entity implements ITickListener
             }
         }
 
-        // now try to match requests with offers
-        Iterator<Long> robotIterator = idleEmpty.iterator();
+        // now try to match remaining requests with offers
+        LongIterator robotIterator = idleEmpty.iterator();
 
-        final TreeMap<Integer, List<Message>> batches = new TreeMap<>( (a,b) -> Integer.compare(b,a) );
+        final Int2ObjectAVLTreeMap<List<Message>> batches = new Int2ObjectAVLTreeMap<>( (a,b) -> Integer.compare(b,a) );
         for ( Message request : requests )
         {
             final List<Message> batch = batches.computeIfAbsent(request.priority, k -> new ArrayList<>());
             batch.add( request );
         }
 
-        for ( var entry : batches.entrySet() )
+        for ( var entry : batches.int2ObjectEntrySet() )
         {
             final List<Message> batch = entry.getValue();
 
@@ -109,17 +113,30 @@ public class Controller extends Entity implements ITickListener
                 Message request = batch.get(i);
 
                 // find matching offers and prefer the closest one
-                Message candidate = offers.stream().filter(x -> x.getItemAndAmount().type.matches(request.getItemAndAmount().type))
-                                        .min((a, b) -> Float.compare(a.sender.dst2(request.sender), b.sender.dst2(request.sender)))
-                                        .orElse(null);
+                Message candidate = null;
+                float bestDist2 = 0;
+                for ( var x : offers )
+                {
+                    if ( x.getItemAndAmount().type.matches(request.getItemAndAmount().type) )
+                    {
+                        float dist2 = x.sender.dst2(request.sender);
+                        if ( candidate == null || dist2 < bestDist2 ) {
+                            candidate = x;
+                            bestDist2 = dist2;
+                        }
+                    }
+                }
 
                 if (candidate != null)
                 {
-                    var robot = robots.get(robotIterator.next());
+                    var robot = robots.get(robotIterator.nextLong());
                     requests.remove( request );
                     offers.remove(candidate);
                     robotIterator.remove();
-                    System.out.println("Using robot " + robot + " that carries " + world.inventory.getAmounts(robot));
+                    if ( Main.DEBUG )
+                    {
+                        System.out.println( "Using robot " + robot + " that carries " + world.inventory.getAmounts( robot ) );
+                    }
                     robot.transfer(candidate.sender, candidate.getItemAndAmount(), request.sender);
                 }
             }
@@ -128,9 +145,9 @@ public class Controller extends Entity implements ITickListener
         // if there are no requests for items but we have
         // idle robots carrying stuff, have them drop it off at the nearest depot
         // so they're eligible for other tasks
-        for (Iterator<Long> iterator = idleCarrying.iterator(); iterator.hasNext(); )
+        for ( LongIterator iterator = idleCarrying.iterator(); iterator.hasNext(); )
         {
-            Long id = iterator.next();
+            final long id = iterator.next();
             final var r = robots.get(id);
             final ItemAndAmount carried = r.carriedItemAndAmount(world);
             final Depot depot = world.findClosestDepotThatAccepts(r, carried.type, carried.amount);
@@ -151,7 +168,7 @@ public class Controller extends Entity implements ITickListener
         {
             Message offer = offers.get(i);
 
-            final Long id = idleEmpty.iterator().next();
+            final long id = idleEmpty.iterator().nextLong();
             var robot = robots.get(id);
             final Depot depot = world.findClosestDepotThatAccepts(robot, offer.getItemAndAmount().type, offer.getItemAndAmount().amount);
             if ( depot != null && depot != offer.sender )
