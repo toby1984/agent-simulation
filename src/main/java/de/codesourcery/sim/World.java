@@ -14,18 +14,41 @@ public class World
     private final List<Entity> entities = new ArrayList<>();
     private final List<ITickListener> tickListeners = new ArrayList<>();
     private final List<Robot> robots = new ArrayList<>();
+    private final List<Controller> controllers = new ArrayList<>();
 
     public long frameCounter;
 
     public void add( Entity entity )
     {
+        if ( entity instanceof Robot )
+        {
+            final Robot r = (Robot) entity;
+            if ( ! r.hasController() )
+            {
+                assignToController( r );
+            }
+            robots.add( (Robot) entity );
+        }
+
         this.entities.add( entity );
         if ( entity instanceof ITickListener) {
             tickListeners.add( (ITickListener) entity );
         }
-        if ( entity instanceof Robot ) {
-            robots.add( (Robot) entity );
+        if ( entity instanceof Controller) {
+            controllers.add( (Controller) entity );
         }
+    }
+
+    private void assignToController(Robot r)
+    {
+        final List<Controller> controllers = findControllersInRange( r.position );
+        if ( controllers.isEmpty() )
+        {
+            throw new IllegalStateException( "No controller in range for "+r );
+        }
+        // assign to controller with highest utilization
+        controllers.sort( (a,b) -> Float.compare( b.utilization() ,a.utilization() ) );
+        controllers.get(0).assignRobot( r );
     }
 
     public void tick(float deltaSeconds)
@@ -39,15 +62,20 @@ public class World
         entities.forEach( consumer );
     }
 
-    public void sendMessage(Message msg) {
+    public void sendMessage(Message msg)
+    {
+        boolean send = false;
 
-//        System.out.println( "RECEIVED: "+msg );
-        for ( Robot r : robots )
+        for ( Controller c : controllers )
         {
-            if ( r != msg.sender && r.dst2( msg.sender.position() ) <= BROADCAST_DIST2 )
-            {
-                r.receive(msg);
+            if ( c.dst2( msg.sender ) <= BROADCAST_DIST2 ) {
+                c.broadcast( msg );
+                send = true;
             }
+        }
+
+        if ( ! send ) {
+            System.err.println("No controller in range, message lost: "+msg);
         }
     }
 
@@ -60,5 +88,26 @@ public class World
             }
         }
         return null;
+    }
+
+    private Controller findControllerInRange(Vec2D pos)
+    {
+        for ( Controller c : controllers ) {
+            if ( c.dst2( pos ) <= BROADCAST_DIST2 ) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    private List<Controller> findControllersInRange(Vec2D pos)
+    {
+        final List<Controller> result = new ArrayList<>();
+        for ( Controller c : controllers ) {
+            if ( c.dst2( pos ) <= BROADCAST_DIST2 ) {
+                result.add( c );
+            }
+        }
+        return result;
     }
 }

@@ -14,12 +14,12 @@ public class Message
     }
 
     public final long id = MSG_ID.incrementAndGet();
-    public final IHasPosition sender;
+    public final Entity sender;
     public final MessageType type;
     public final Object payload;
     public final Message replyTo;
 
-    public Message(IHasPosition sender, MessageType type)
+    public Message(Entity sender, MessageType type)
     {
         this.sender = sender;
         this.type = type;
@@ -27,7 +27,7 @@ public class Message
         this.replyTo = null;
     }
 
-    public Message(IHasPosition sender, MessageType type, Object payload)
+    public Message(Entity sender, MessageType type, Object payload)
     {
         this.sender = sender;
         this.type = type;
@@ -35,7 +35,7 @@ public class Message
         this.replyTo = null;
     }
 
-    public Message(IHasPosition sender, MessageType type, Object payload, Message replyTo)
+    public Message(Entity sender, MessageType type, Object payload, Message replyTo)
     {
         this.sender = sender;
         this.type = type;
@@ -43,7 +43,7 @@ public class Message
         this.replyTo = replyTo;
     }
 
-    public Message createReply(IHasPosition sender, MessageType type, Object payload)
+    public Message createReply(Entity sender, MessageType type, Object payload)
     {
         return new Message(sender,type,payload,this);
     }

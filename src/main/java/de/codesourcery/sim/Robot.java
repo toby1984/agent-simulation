@@ -14,6 +14,7 @@ public class Robot extends MoveableEntity
     public ItemType carriedItem;
     public int carriedAmount;
     public int maxCarryingCapacity = 1;
+    public Controller controller;
 
     private List<Message> inbox = new ArrayList<>();
 
@@ -219,7 +220,7 @@ public class Robot extends MoveableEntity
         }
     }
 
-    private final class IdleState extends State
+    public final class IdleState extends State
     {
         @Override
         public String toString()
@@ -308,5 +309,13 @@ public class Robot extends MoveableEntity
 
     public void receive(Message msg) {
         this.inbox.add(msg);
+    }
+
+    public void receive(List<Message> msgs) {
+        this.inbox.addAll(msgs);
+    }
+
+    public boolean hasController() {
+        return this.controller != null;
     }
 }
