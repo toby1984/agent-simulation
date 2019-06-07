@@ -113,20 +113,26 @@ public class Main extends JFrame
         new Timer( 16, new ActionListener()
         {
             private long lastTick = -1;
+            private long frameCounter;
 
             @Override
             public void actionPerformed(ActionEvent ev)
             {
                 long now = System.currentTimeMillis();
-                if ( lastTick != -1 )
+                if ( frameCounter > 0 )
                 {
                     final float elapsedSeconds = (now-lastTick) / 1000.0f;
                     if ( mainPanel.simulationRunning )
                     {
                         world.tick( elapsedSeconds );
+                        long time2 = System.currentTimeMillis();
+                        if ( (frameCounter % 60) == 0 ) {
+                            System.out.println("Elapsed time: "+(time2-now)+" millis");
+                        }
                     }
                     mainPanel.repaint();
                 }
+                frameCounter++;
                 lastTick = now;
             }
         } ).start();

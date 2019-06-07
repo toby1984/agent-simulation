@@ -156,24 +156,17 @@ public class MainPanel extends JPanel
         return viewToModel(input.x, input.y );
     }
 
-    private Vec2D viewToModel(int vx, int vy) {
-        /*
-        TMP1.x = ((v.x - cameraPosition.x)/viewPort.x) * getWidth();
-
-        =>
-        TMP1.x/getWidth() = (v.x - cameraPosition.x)/viewPort.x
-        (TMP1.x/getWidth())*viewPort.x = v.x - cameraPosition.x
-        (TMP1.x/getWidth())*viewPort.x + cameraPosition.x = v.x
-         */
-        TMP2.x = (vx/(float) getWidth())* viewPort.x + cameraPosition.x;
-        TMP2.y = (vy/(float) getHeight())* viewPort.y + cameraPosition.y;
+    private Vec2D viewToModel(int vx, int vy)
+    {
+        TMP2.x = (vx/(float) getWidth())*viewPort.x + (cameraPosition.x - viewPort.x/2);
+        TMP2.y = (vy/(float) getHeight())*viewPort.y + (cameraPosition.y - viewPort.y/2);
         return TMP2;
     }
 
     private Vec2Di modelToView(Vec2D v)
     {
-        TMP1.x = (int) (((v.x - cameraPosition.x)/viewPort.x) * getWidth());
-        TMP1.y = (int) (((v.y - cameraPosition.y)/viewPort.y) * getHeight());
+        TMP1.x = (int) (((v.x - (cameraPosition.x - viewPort.x/2))/viewPort.x) * getWidth());
+        TMP1.y = (int) (((v.y - (cameraPosition.y - viewPort.y/2))/viewPort.y) * getHeight());
         return TMP1;
     }
 
