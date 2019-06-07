@@ -104,4 +104,9 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
     public boolean isFull(World world) {
         return availableSpace( world ) == 0;
     }
+
+    public String getDebugStatus(World world)
+    {
+        return toString()+"\n Stored "+world.inventory.getStoredAmount(this)+" items out of "+capacity+"\n";
+    }
 }

@@ -9,6 +9,7 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.apache.commons.lang3.StringUtils.rightPad;
 
@@ -44,7 +45,7 @@ public class DebuggingView
             // setup background
             g.setFont( font );
             g.setColor( Color.GRAY );
-            g.fillRect( 0, 0, 300, 200 );
+            g.fillRect( 0, 0, 300, 400 );
             final FontMetrics metrics = g.getFontMetrics();
             g.setColor( Color.WHITE );
 
@@ -88,9 +89,32 @@ public class DebuggingView
                     world.getFactoriesProductionLossMissingInput(), 5, y );
             y += metrics.getHeight();
 
+            // print controller utilization
+            final int finalY = y;
+            world.visitEntities(new Consumer<>()
+            {
+                private int y2 = finalY;
+
+                @Override
+                public void accept(Entity e)
+                {
+                    if ( e instanceof Controller )
+                    {
+                        final String s = leftPad(((Controller) e).robotCount(),3)+" robots, "+
+                                             leftPad((100.0f*((Controller) e).utilization()),6)+" % busy";
+                        g.drawString(s, 5, y2);
+                        y2 += metrics.getHeight();
+                    }
+                }
+            });
+
         } finally {
             g.setFont( old );
         }
+    }
+
+    private static String leftPad(float number, int size) {
+        return StringUtils.leftPad( Float.toString( ( (int) (number*100))/100.0f ), size );
     }
 
     private static String leftPad(int number, int size) {

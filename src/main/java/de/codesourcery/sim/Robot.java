@@ -6,7 +6,7 @@ public class Robot extends MoveableEntity implements IItemReceiver
     private static final float PICKUP_DIST2 = PICKUP_DIST*PICKUP_DIST;
 
     public State currentState = new IdleState();
-    public int maxCarryingCapacity = 1;
+    public int maxCarryingCapacity = 2;
     public Controller controller;
 
     public abstract class State {
@@ -21,11 +21,11 @@ public class Robot extends MoveableEntity implements IItemReceiver
         }
     }
 
-    private final class TransferState extends State
+    public final class TransferState extends State
     {
-        private final Entity src;
-        private final ItemAndAmount details;
-        private final Entity dst;
+        public final Entity src;
+        public final ItemAndAmount details;
+        public final Entity dst;
 
         private boolean pickingUp = true;
         private State current;
@@ -117,9 +117,9 @@ public class Robot extends MoveableEntity implements IItemReceiver
         }
     }
 
-    private final class MoveToLocationState extends State {
+    public final class MoveToLocationState extends State {
 
-        private final Vec2D destination;
+        public final Vec2D destination;
         private final State stateAtDestination;
 
         private MoveToLocationState(Vec2D destination,State stateAtDestination)
@@ -204,7 +204,7 @@ public class Robot extends MoveableEntity implements IItemReceiver
     public String toString()
     {
         return "Robot #"+id+" [ controller: "+
-                (controller == null ? "none": Long.toString(controller.id))+")";
+                (controller == null ? "none": Long.toString(controller.id))+" , "+currentState+" ,  ]";
     }
 
     @Override

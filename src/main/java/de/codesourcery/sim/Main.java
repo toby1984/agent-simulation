@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 public class Main extends JFrame
@@ -33,9 +32,9 @@ public class Main extends JFrame
 
         Random r = new Random(0xdeadbeef );
 
-        float mapExtent = 0.5f;
+        float mapExtent = Controller.BROADCAST_RADIUS;
 
-        int controllers = 10;
+        int controllers = 1;
         int robots = 100;
         int factories = 20;
         int depots = 20;
@@ -63,7 +62,7 @@ public class Main extends JFrame
             {
                 final int ctrlIdx = r.nextInt( cntrls.size() );
                 final Controller c = cntrls.get( ctrlIdx );
-                tmp.randomize( Controller.BROADCAST_DIST / 2, r );
+                tmp.randomize( Controller.BROADCAST_RADIUS*0.99f , r );
                 tmp.add( c.position );
                 e.position.set( tmp );
                 tries++;

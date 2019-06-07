@@ -58,7 +58,7 @@ public class Vec2D
     float dst2(Vec2D other)
     {
         float dx = other.x - x;
-        float dy =other.y - y;
+        float dy = other.y - y;
         return dx*dx + dy*dy;
     }
 
@@ -120,10 +120,11 @@ public class Vec2D
         return this;
     }
 
-    public Vec2D randomize(float len, Random rnd)
+    public Vec2D randomize(float maxLen, Random rnd)
     {
-        x = rnd.nextFloat()-0.5f;
-        y = rnd.nextFloat()-0.5f;
+        float len = Math.max(0.1f,rnd.nextFloat())*maxLen;
+        x = 2*(rnd.nextFloat()-0.5f);
+        y = 2*(rnd.nextFloat()-0.5f);
         return nor().scl(len);
     }
 }

@@ -13,13 +13,10 @@ import java.util.List;
 
 public class Controller extends Entity implements ITickListener
 {
-    public static final float BROADCAST_DIST = 0.5f;
-    public static final float BROADCAST_DIST2 = BROADCAST_DIST*BROADCAST_DIST;
+    public static final float BROADCAST_RADIUS = 0.75f;
+    public static final float BROADCAST_RADIUS2 = BROADCAST_RADIUS * BROADCAST_RADIUS;
 
-    public static final Vec2D BROADCAST_RANGE = new Vec2D(
-            (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST),
-            (float) Math.sqrt( BROADCAST_DIST*BROADCAST_DIST + BROADCAST_DIST*BROADCAST_DIST)
-    );
+    public static final Vec2D RANGE_EXTENT = new Vec2D(BROADCAST_RADIUS*2,BROADCAST_RADIUS*2);
 
     private final List<Message> offers = new ArrayList<>();
 
@@ -30,7 +27,7 @@ public class Controller extends Entity implements ITickListener
     private final LongArraySet idleEmpty =  new LongArraySet();
     private final LongArraySet idleCarrying =  new LongArraySet();
 
-    public int maxSupportedRobots = 20;
+    public int maxSupportedRobots = 500;
 
     public Controller(Vec2D v)
     {
@@ -62,52 +59,69 @@ public class Controller extends Entity implements ITickListener
         busyStateChanged(robot,world);
     }
 
+    private Robot findClosestIdleCarrying(Message request, World world)
+    {
+        Robot closest = null;
+        float closestDst2 = 0;
+        for ( LongIterator it = idleCarrying.iterator() ; it.hasNext() ; )
+        {
+            final Robot r = robots.get( it.nextLong() );
+            if ( r.carriedItem(world).matches( request.getItemAndAmount().type ) )
+            {
+                float dst2 = request.sender.dst2( r );
+                if ( closest == null || dst2 < closestDst2 ) {
+                    closestDst2 = dst2;
+                    closest = r;
+                }
+            }
+        }
+        return closest;
+    }
+
     @Override
     public void tick(float deltaSeconds, World world)
     {
         // sort requests descending by priority
         requests.sort(Message.PRIO_COMPERATOR);
 
-        // try to serve requests using idle robots carrying items first
-        // so they can be used for other tasks
-        for (LongIterator robotIterator = idleCarrying.iterator(); robotIterator.hasNext(); )
-        {
-            final long id = robotIterator.nextLong();
-            final Robot robot = robots.get(id);
-            final ItemType carried = robot.carriedItem(world);
-            for (Iterator<Message> requestIterator = requests.iterator(); requestIterator.hasNext(); )
-            {
-                final Message msg = requestIterator.next();
-                if ( msg.getItemAndAmount().hasType( carried ) )
-                {
-                    robot.receive(msg);
-
-                    busy.add( robot.id );
-
-                    requestIterator.remove();
-                    robotIterator.remove();
-                    break;
-                }
-            }
-        }
-
-        // now try to match remaining requests with offers
-
-        final Int2ObjectAVLTreeMap<List<Message>> batches = new Int2ObjectAVLTreeMap<>( (a,b) -> Integer.compare(b,a) );
+        final Int2ObjectAVLTreeMap<List<Message>> batchedRequests = new Int2ObjectAVLTreeMap<>( (a,b) -> Integer.compare(b,a) );
         for ( Message request : requests )
         {
-            final List<Message> batch = batches.computeIfAbsent(request.priority, k -> new ArrayList<>());
+            final List<Message> batch = batchedRequests.computeIfAbsent(request.priority, k -> new ArrayList<>());
             batch.add( request );
         }
 
+        // shuffle each batch so messages with the same priority don't get processed
+        // in the same order all the time
+        for ( var batch : batchedRequests.int2ObjectEntrySet() )
+        {
+            Collections.shuffle(batch.getValue());
+        }
+
+        // try to serve requests using idle robots carrying items first
+        // so they can be used for other tasks
+
+        /*
+         * TODO: Operate on shuffled batches of requests with the same priority instead of always
+         *       processing them in the same order.
+         */
+        for (Iterator<Message> reqIt = requests.iterator(); reqIt.hasNext(); )
+        {
+            final Message req = reqIt.next();
+            final Robot robot = findClosestIdleCarrying(req, world);
+            if ( robot != null )
+            {
+                idleCarrying.remove( robot.id );
+                busy.add( robot.id );
+                reqIt.remove();
+                robot.receive(req);
+            }
+        }
+
         LongIterator robotIterator = idleEmpty.iterator();
-        for ( var entry : batches.int2ObjectEntrySet() )
+        for ( var entry : batchedRequests.int2ObjectEntrySet() )
         {
             final List<Message> batch = entry.getValue();
-
-            // shuffle batch of requests with the same priority
-            // so we don't always serve the first one
-            Collections.shuffle(batch);
 
             for (int i = 0; i < batch.size() && robotIterator.hasNext(); i++)
             {
@@ -231,7 +245,7 @@ public class Controller extends Entity implements ITickListener
     }
 
     public boolean isInRange(Vec2D v) {
-        return dst2( v ) <= BROADCAST_DIST2;
+        return dst2( v ) <= BROADCAST_RADIUS2;
     }
 
     public boolean isInRange(Entity entity)

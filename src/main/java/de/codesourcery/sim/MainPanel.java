@@ -3,6 +3,8 @@ package de.codesourcery.sim;
 import javax.swing.JPanel;
 import javax.swing.ToolTipManager;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -11,6 +13,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.font.LineMetrics;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 
 public class MainPanel extends JPanel
@@ -154,7 +158,15 @@ public class MainPanel extends JPanel
                 {
                     final StringBuilder buffer = new StringBuilder( "<HTML>" );
 
-                    if ( entity instanceof Controller) {
+                    if ( entity instanceof Depot ) {
+                        buffer.append( ((Depot) entity).getDebugStatus( world ).replace("\n","<BR>"));
+                        buffer.append("<BR>");
+                        world.inventory.visitInventory( entity, (itemType, amount, ctx) ->
+                        {
+                            buffer.append( itemType ).append( "x" ).append( amount ).append( "<BR>" );
+                        }, null );
+                    }
+                    else if ( entity instanceof Controller) {
                         buffer.append( ((Controller) entity).getDebugStatus( world ).replace("\n","<BR>"));
                     }
                     else
@@ -199,15 +211,13 @@ public class MainPanel extends JPanel
 
     private Vec2Di modelToView(Vec2D v)
     {
-        TMP1.x = (int) (((v.x - (cameraPosition.x - viewPort.x/2))/viewPort.x) * getWidth());
-        TMP1.y = (int) (((v.y - (cameraPosition.y - viewPort.y/2))/viewPort.y) * getHeight());
-        return TMP1;
+        return modelToView(v.x, v.y);
     }
 
-    private Vec2Di modelToViewNoTranslate(Vec2D v)
+    private Vec2Di modelToView(float vx, float vy)
     {
-        TMP1.x = (int) ((v.x /viewPort.x) * getWidth());
-        TMP1.y = (int) ((v.y /viewPort.y) * getHeight());
+        TMP1.x = (int) (((vx - (cameraPosition.x - viewPort.x/2))/viewPort.x) * getWidth());
+        TMP1.y = (int) (((vy - (cameraPosition.y - viewPort.y/2))/viewPort.y) * getHeight());
         return TMP1;
     }
 
@@ -218,17 +228,18 @@ public class MainPanel extends JPanel
 
     private Rectangle getBoundingBox(Entity entity, Vec2D extent)
     {
-        Vec2Di resized = modelToViewNoTranslate(extent);
-        float w = resized.x;
-        float h = resized.y;
+        Vec2Di p0 = modelToView(entity.position.x - extent.x/2, entity.position.y - extent.y/2);
 
-        final Vec2Di xy = modelToView( entity.position );
+        int p0x = p0.x;
+        int p0y = p0.y;
 
-        bounds.width = (int) w;
-        bounds.height = (int) h;
+        final Vec2Di p1 = modelToView(entity.position.x + extent.x/2, entity.position.y + extent.y/2);
 
-        bounds.x = (int) (xy.x - (w / 2.0f));
-        bounds.y = (int) (xy.y - (h / 2.0f));
+        bounds.width = p1.x - p0x;
+        bounds.height = p1.y - p0y;
+
+        bounds.x = p0x;
+        bounds.y = p0y;
         return bounds;
     }
 
@@ -258,6 +269,24 @@ public class MainPanel extends JPanel
     {
         super.paintComponent( g );
 
+        Entity src = null;
+        Entity dst = null;
+        if ( highlightedEntity instanceof Robot )
+        {
+            final Robot r = (Robot) highlightedEntity;
+            if ( r.currentState instanceof Robot.TransferState)
+            {
+                final Robot.TransferState t = (Robot.TransferState) r.currentState;
+                src = t.src;
+                dst = t.dst;
+            } else if ( r.currentState instanceof Robot.MoveToLocationState ) {
+                dst = world.getEntityAt( ((Robot.MoveToLocationState) r.currentState).destination );
+            }
+        }
+
+        final Entity finalSrc = src;
+        final Entity finalDst = dst;
+
         world.visitEntities( entity ->
         {
             Rectangle bounds = getBoundingBox( entity );
@@ -268,6 +297,9 @@ public class MainPanel extends JPanel
 
                 // factory -> blue
                 g.setColor( Color.BLUE );
+                if ( (entity == finalSrc || entity == finalDst ) || (highlightedEntity instanceof Controller && ((Controller) highlightedEntity).isInRange( f ) ) ) {
+                    g.setColor( highlightColor );
+                }
                 g.fillRect( bounds.x, bounds.y, bounds.width, bounds.height );
                 if ( f.productionLostOutputFull > 0 || f.productionLostMissingInput > 0 ) {
                     g.setColor(Color.RED);
@@ -280,7 +312,7 @@ public class MainPanel extends JPanel
                 // robot -> red circle
                 final Robot r = (Robot) entity;
                 g.setColor( Color.RED );
-                if ( highlightedEntity instanceof Controller && r.controller == highlightedEntity )
+                if ( (entity == finalSrc || entity == finalDst ) || ( highlightedEntity instanceof Controller && r.controller == highlightedEntity ) )
                 {
                     g.setColor( highlightColor);
                 }
@@ -292,6 +324,9 @@ public class MainPanel extends JPanel
                 final Depot d = (Depot) entity;
                 // depot -> black box
                 g.setColor( Color.BLACK );
+                if ( (entity == finalSrc || entity == finalDst ) || ( highlightedEntity instanceof Controller && ((Controller) highlightedEntity).isInRange( d ) ) ) {
+                    g.setColor( highlightColor );
+                }
                 g.fillRect( bounds.x, bounds.y, bounds.width, bounds.height );
                 if ( d.isFull(world) ) {
                     g.setColor(Color.RED);
@@ -304,7 +339,7 @@ public class MainPanel extends JPanel
                 // controller green box
                 g.setColor( Color.GREEN );
                 boolean doHighlight = false;
-                if ( highlightedEntity == c ) {
+                if ( (entity == finalSrc || entity == finalDst ) || highlightedEntity == c ) {
                     doHighlight = true;
                 }
                 if ( highlightedEntity instanceof Depot && c.isInRange( highlightedEntity ) ) {
@@ -324,13 +359,35 @@ public class MainPanel extends JPanel
                 g.fillRect( bounds.x, bounds.y, bounds.width, bounds.height );
 
                 // draw broadcast range
-                bounds = getBoundingBox( entity, Controller.BROADCAST_RANGE );
+                bounds = getBoundingBox( entity, Controller.RANGE_EXTENT );
                 g.setColor( Color.GREEN );
                 if ( doHighlight ) {
                     g.setColor( highlightColor );
                 }
                 g.drawArc( bounds.x, bounds.y, bounds.width, bounds.height, 0, 360 );
             }
-        } );
+        });
+
+        if ( src != null )
+        {
+            final Vec2Di modelVec = modelToView(src.position);
+            drawTextBox("SRC", modelVec.x , modelVec.y,g );
+        }
+        if ( dst != null )
+        {
+            final Vec2Di modelVec = modelToView(dst.position);
+            drawTextBox("DST", modelVec.x , modelVec.y,g );
+        }
     }
+
+    private void drawTextBox(String msg,int x,int y,Graphics g)
+    {
+        final FontMetrics metrics = g.getFontMetrics();
+        final Rectangle2D bounds = metrics.getStringBounds(msg, g);
+        g.setColor(Color.BLACK);
+        g.fillRect(x, (int) (y-bounds.getHeight()+metrics.getDescent()), (int) bounds.getWidth(), (int) bounds.getHeight() );
+        g.setColor(Color.WHITE);
+        g.drawString(msg,x,y);
+    }
+
 }

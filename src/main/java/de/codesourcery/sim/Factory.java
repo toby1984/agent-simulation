@@ -52,14 +52,19 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
         }
 
         final int storedAmount = storedAmount(world);
-        if ( storedAmount > 0 ) {
+        if ( storedAmount > 0 )
+        {
+            int prio = storedAmount < maxStorage ? Message.LOW_PRIORITY : Message.HIGH_PRIORITY;
             world.sendMessage( new Message(this, Message.MessageType.ITEM_AVAILABLE,
-                new ItemAndAmount( producedItem, storedAmount ), Message.LOW_PRIORITY ) );
+                new ItemAndAmount( producedItem, storedAmount ), prio ) );
         }
-        final int inputNeeded = input1MaxAmount - input1Stored(world );
-        if ( inputNeeded > 0 ) {
+        final int input1Stored = input1Stored(world );
+        final int inputNeeded = input1MaxAmount - input1Stored;
+        if ( inputNeeded > 0 )
+        {
+            int prio = input1Stored >= input1Consumed ? Message.LOW_PRIORITY : Message.HIGH_PRIORITY;
             world.sendMessage( new Message(this, Message.MessageType.ITEM_NEEDED,
-                    new ItemAndAmount( input1Type, inputNeeded ) ) );
+                    new ItemAndAmount( input1Type, inputNeeded ), prio ) );
         }
     }
 
