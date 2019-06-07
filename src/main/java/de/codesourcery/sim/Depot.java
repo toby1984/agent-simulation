@@ -8,7 +8,7 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
 {
     public ItemType[] acceptedItemTypes;
     public int minAmount=0;
-    public int capacity =100;
+    public int capacity = 200;
 
     public Depot(Vec2D v, ItemType... acceptedItemTypes)
     {
@@ -99,5 +99,9 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
             }
         }
         return 0;
+    }
+
+    public boolean isFull(World world) {
+        return availableSpace( world ) == 0;
     }
 }

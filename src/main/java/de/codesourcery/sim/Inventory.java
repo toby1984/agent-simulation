@@ -12,9 +12,22 @@ import java.util.Map;
 
 public class Inventory
 {
+    // key is item type, value is Map<Entity ID, Amount>
     private Map<ItemType, Long2IntArrayMap> amountsByType = new HashMap<>();
 
+    // Key is entity ID, value is Map<ItemType,Amount>
     private Long2ObjectArrayMap<Object2IntArrayMap<ItemType>> itemsByEntity = new Long2ObjectArrayMap<>();
+
+    public List<ItemAndAmount> getTotalInventory()
+    {
+        final List<ItemAndAmount> result = new ArrayList<>();
+        for ( var entry : amountsByType.entrySet() )
+        {
+            int amount = entry.getValue().values().stream().reduce( Integer::sum ).orElse( 0 );
+            result.add( new ItemAndAmount( entry.getKey(), amount ) );
+        }
+        return result;
+    }
 
     public interface IInventoryPredicate
     {

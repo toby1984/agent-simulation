@@ -37,7 +37,7 @@ public class Main extends JFrame
         int controllers = 10;
         int robots = 100;
         int factories = 20;
-        int depots = 5;
+        int depots = 20;
 
         final World w = new World();
 
@@ -81,9 +81,10 @@ public class Main extends JFrame
 
         IntStream.range(0,depots).forEach( x ->
         {
-            final Depot depot = new Depot( rndLocation.get() );
+            final Depot depot = new Depot( rndLocation.get(), ItemType.CONCRETE, ItemType.STONE );
             w.add( depot );
-            w.inventory.create(depot,ItemType.STONE,10);
+            w.inventory.create(depot,ItemType.CONCRETE,50);
+            w.inventory.create(depot,ItemType.STONE,50);
         } );
         return w;
     }

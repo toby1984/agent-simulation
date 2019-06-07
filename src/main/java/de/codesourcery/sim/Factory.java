@@ -14,6 +14,9 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
     public int input1Consumed=1;
     public int input1MaxAmount=10;
 
+    public int productionLostMissingInput;
+    public int productionLostOutputFull;
+
     public Factory(Vec2D v)
     {
         super( v );
@@ -39,7 +42,11 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
                 {
                     world.inventory.consume(this,input1Type,input1Consumed);
                     world.inventory.create(this,producedItem,itemsPerCycle);
+                } else {
+                    productionLostOutputFull++;
                 }
+            } else {
+                productionLostMissingInput++;
             }
             this.elapsedSeconds -= productionTimeSeconds;
         }

@@ -9,7 +9,7 @@ public class Robot extends MoveableEntity implements IItemReceiver
     public int maxCarryingCapacity = 1;
     public Controller controller;
 
-    private abstract class State {
+    public abstract class State {
 
         public void onEnter(World world) { }
 
@@ -41,7 +41,7 @@ public class Robot extends MoveableEntity implements IItemReceiver
         @Override
         public String toString()
         {
-            return "TRANSFER[ "+details+" from "+src+" to "+dst;
+            return "TRANSFER[ "+details+" from "+src+" to "+dst+"], current: "+current;
         }
 
         @Override
@@ -203,7 +203,8 @@ public class Robot extends MoveableEntity implements IItemReceiver
     @Override
     public String toString()
     {
-        return "Robot #"+id;
+        return "Robot #"+id+" [ controller: "+
+                (controller == null ? "none": Long.toString(controller.id))+")";
     }
 
     @Override
@@ -223,11 +224,11 @@ public class Robot extends MoveableEntity implements IItemReceiver
     }
 
     public boolean isIdle() {
-        return ! isBusy();
+        return this.currentState instanceof IdleState;
     }
 
     public boolean isBusy() {
-        return !(this.currentState instanceof IdleState);
+        return ! isIdle();
     }
 
     public boolean isEmpty(World world) {

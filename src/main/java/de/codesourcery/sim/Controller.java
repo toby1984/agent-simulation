@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -29,6 +30,8 @@ public class Controller extends Entity implements ITickListener
     private final LongArraySet idleEmpty =  new LongArraySet();
     private final LongArraySet idleCarrying =  new LongArraySet();
 
+    public int maxSupportedRobots = 20;
+
     public Controller(Vec2D v)
     {
         super( v );
@@ -49,7 +52,11 @@ public class Controller extends Entity implements ITickListener
         }
     }
 
-    public void assignRobot(Robot robot,World world) {
+    public void assignRobot(Robot robot,World world)
+    {
+        if ( robots.size() == maxSupportedRobots ) {
+            throw new IllegalStateException( "Cannot assign robot to controller #" + id + " that is already at max. capacity" );
+        }
         robot.controller = this;
         robots.put( robot.id, robot );
         busyStateChanged(robot,world);
@@ -85,7 +92,6 @@ public class Controller extends Entity implements ITickListener
         }
 
         // now try to match remaining requests with offers
-        LongIterator robotIterator = idleEmpty.iterator();
 
         final Int2ObjectAVLTreeMap<List<Message>> batches = new Int2ObjectAVLTreeMap<>( (a,b) -> Integer.compare(b,a) );
         for ( Message request : requests )
@@ -94,6 +100,7 @@ public class Controller extends Entity implements ITickListener
             batch.add( request );
         }
 
+        LongIterator robotIterator = idleEmpty.iterator();
         for ( var entry : batches.int2ObjectEntrySet() )
         {
             final List<Message> batch = entry.getValue();
@@ -127,6 +134,7 @@ public class Controller extends Entity implements ITickListener
                     requests.remove( request );
                     offers.remove(candidate);
                     robotIterator.remove();
+                    busy.add( robot.id );
                     if ( Main.DEBUG )
                     {
                         System.out.println( "Using robot " + robot + " that carries " + world.inventory.getAmounts( robot ) );
@@ -141,17 +149,20 @@ public class Controller extends Entity implements ITickListener
         // so they're eligible for other tasks
         for ( LongIterator iterator = idleCarrying.iterator(); iterator.hasNext(); )
         {
-            final long id = iterator.next();
+            final long id = iterator.nextLong();
             final var r = robots.get(id);
             final ItemAndAmount carried = r.carriedItemAndAmount(world);
             final Depot depot = world.findClosestDepotThatAccepts(r, carried.type, carried.amount);
-            final int toDeliver = Math.min(depot.getAcceptedAmount(carried.type, world), carried.amount);
-            if (toDeliver > 0)
+            if ( depot != null )
             {
-                carried.amount = toDeliver;
-                r.receive(new Message(depot, Message.MessageType.ITEM_NEEDED, carried));
-                iterator.remove();
-                busy.add( r.id );
+                final int toDeliver = Math.min( depot.getAcceptedAmount( carried.type, world ), carried.amount );
+                if ( toDeliver > 0 )
+                {
+                    carried.amount = toDeliver;
+                    r.receive( new Message( depot, Message.MessageType.ITEM_NEEDED, carried ) );
+                    iterator.remove();
+                    busy.add( r.id );
+                }
             }
         }
 
@@ -168,6 +179,7 @@ public class Controller extends Entity implements ITickListener
             if ( depot != null && depot != offer.sender )
             {
                 idleEmpty.remove(id);
+                busy.add(id);
                 System.out.println("Using robot "+robot+" that carries "+world.inventory.getAmounts(robot));
                 robot.transfer( offer.sender,offer.getItemAndAmount(),depot);
             }
@@ -178,7 +190,7 @@ public class Controller extends Entity implements ITickListener
 
     public void busyStateChanged(Robot robot,World world) {
 
-        final Long id = robot.id;
+        final long id = robot.id;
 
         if ( robot.isBusy() )
         {
@@ -212,7 +224,7 @@ public class Controller extends Entity implements ITickListener
     public String toString()
     {
         return "Controller #"+id+" [ "+busy.size()+" busy, "+idleCarrying.size()+" idle carrying, "+
-                   idleEmpty.size()+" idle empty, "+(utilization()*100)+"% busy ]";
+                idleEmpty.size()+" idle empty, "+(utilization()*100)+"% busy ]";
     }
 
     public boolean isInRange(Vec2D v) {
@@ -222,5 +234,32 @@ public class Controller extends Entity implements ITickListener
     public boolean isInRange(Entity entity)
     {
         return isInRange( entity.position );
+    }
+
+    public String getDebugStatus(World world)
+    {
+        final StringBuilder buffer = new StringBuilder();
+        buffer.append("Controller #"+id )
+                .append(" ")
+                .append( robots.size() )
+                .append( " robots, " )
+                .append( busy.size() )
+                .append( " busy, " )
+                .append( idleCarrying.size() )
+                .append( " idle (carrying), " )
+                .append( idleEmpty.size() )
+                .append( " idle (empty)" )
+                .append("\n");
+        robots.values().stream().sorted( Comparator.comparing( a -> a.id ) ).forEach( r -> {
+            buffer.append( "Robot #" ).append( r.id )
+                    .append( ", state: " )
+                    .append( r.currentState )
+                    .append( " [carrying: " )
+                    .append( r.carriedItem( world ) )
+                    .append( " x " )
+                    .append( r.carriedAmount( world ) )
+                    .append(" ]\n");
+        });
+        return buffer.toString();
     }
 }

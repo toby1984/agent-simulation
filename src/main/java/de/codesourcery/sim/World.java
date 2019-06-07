@@ -1,6 +1,7 @@
 package de.codesourcery.sim;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -35,12 +36,13 @@ public class World
     private void assignToController(Robot r)
     {
         final List<Controller> controllers = findControllersInRange( r.position );
+        controllers.removeIf( c -> c.robotCount() == c.maxSupportedRobots );
         if ( controllers.isEmpty() )
         {
-            throw new IllegalStateException( "No controller in range for "+r );
+            throw new IllegalStateException( "No suitable controller in range for "+r );
         }
-        // assign to controller with highest utilization
-        controllers.sort( (a,b) -> Float.compare( b.utilization() ,a.utilization() ) );
+        // assign to controller with least amount of robots
+        controllers.sort( Comparator.comparing( Controller::robotCount ) );
         controllers.get(0).assignRobot( r, this );
     }
 
@@ -114,5 +116,15 @@ public class World
         }
         candidates.sort( (a,b) -> Float.compare( a.dst2(robot) , b.dst2(robot) ) );
         return candidates.get(0);
+    }
+
+    public int getFactoriesProductionLossMissingInput() {
+        return entities.stream().filter( x -> x instanceof Factory)
+                .mapToInt( x-> ((Factory) x).productionLostMissingInput ).sum();
+    }
+
+    public int getFactoriesProductionLossOutputFull() {
+        return entities.stream().filter( x -> x instanceof Factory)
+                .mapToInt( x-> ((Factory) x).productionLostOutputFull ).sum();
     }
 }
