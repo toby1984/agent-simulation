@@ -180,7 +180,10 @@ public class Controller extends Entity implements ITickListener
             {
                 idleEmpty.remove(id);
                 busy.add(id);
-                System.out.println("Using robot "+robot+" that carries "+world.inventory.getAmounts(robot));
+                if ( Main.DEBUG )
+                {
+                    System.out.println( "Using robot " + robot + " that carries " + world.inventory.getAmounts( robot ) );
+                }
                 robot.transfer( offer.sender,offer.getItemAndAmount(),depot);
             }
         }

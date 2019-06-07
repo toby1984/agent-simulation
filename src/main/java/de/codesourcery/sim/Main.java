@@ -11,6 +11,7 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
@@ -55,22 +56,36 @@ public class Main extends JFrame
             w.add( c );
             cntrls.add( c );
         }
-        final Supplier<Vec2D> rndLocation = () ->
+        final Consumer<Entity> rndLocation = e ->
         {
-            final int ctrlIdx = r.nextInt( cntrls.size() );
-            final Controller c = cntrls.get(ctrlIdx);
-            tmp.randomize( Controller.BROADCAST_DIST/2 , r );
-            tmp.add( c.position );
-            return tmp;
+            int tries = 0;
+            do
+            {
+                final int ctrlIdx = r.nextInt( cntrls.size() );
+                final Controller c = cntrls.get( ctrlIdx );
+                tmp.randomize( Controller.BROADCAST_DIST / 2, r );
+                tmp.add( c.position );
+                e.position.set( tmp );
+                tries++;
+            } while ( w.intersectsAny( e.position, e.extent ) && tries < 1000);
+            if ( tries == 100 ) {
+                System.err.println("Failed to position "+e);
+            }
         };
 
         // add robots
-        IntStream.range(0,robots).forEach( x -> w.add( new Robot(rndLocation.get()) ) );
+        IntStream.range(0,robots).forEach( x ->
+        {
+            final Robot rob = new Robot( tmp );
+            rndLocation.accept( rob );
+            w.add( rob );
+        } );
 
         // add factories
         for ( int i = 0 ; i < factories ; i++ )
         {
-            final Factory factory = new Factory( rndLocation.get() );
+            final Factory factory = new Factory( tmp );
+            rndLocation.accept( factory );
             factory.productionTimeSeconds = 1 + r.nextFloat()*3;
             if ( r.nextBoolean() ) {
                 factory.producedItem = ItemType.STONE;
@@ -81,7 +96,8 @@ public class Main extends JFrame
 
         IntStream.range(0,depots).forEach( x ->
         {
-            final Depot depot = new Depot( rndLocation.get(), ItemType.CONCRETE, ItemType.STONE );
+            final Depot depot = new Depot( tmp, ItemType.CONCRETE, ItemType.STONE );
+            rndLocation.accept( depot );
             w.add( depot );
             w.inventory.create(depot,ItemType.CONCRETE,50);
             w.inventory.create(depot,ItemType.STONE,50);

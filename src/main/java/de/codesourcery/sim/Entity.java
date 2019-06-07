@@ -16,6 +16,22 @@ public class Entity implements IHasPosition
         this(v.x,v.y);
     }
 
+    public boolean intersects(Entity other) {
+        return intersects(other.position,other.extent);
+    }
+
+    public boolean intersects(Vec2D op, Vec2D oe)
+    {
+        final BoundingBox b1 = new BoundingBox( this );
+        final BoundingBox b2 = new BoundingBox( op,oe );
+
+        boolean intersects = b1.intersects( b2 );
+        if ( intersects ) {
+//            System.out.println( b1+" intersects "+b2);
+        }
+        return intersects;
+    }
+
     public boolean contains(Vec2D v) {
 
         float left = position.x - extent.x/2;

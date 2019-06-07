@@ -127,4 +127,9 @@ public class World
         return entities.stream().filter( x -> x instanceof Factory)
                 .mapToInt( x-> ((Factory) x).productionLostOutputFull ).sum();
     }
+
+    public boolean intersectsAny(Vec2D position, Vec2D extent)
+    {
+        return entities.stream().anyMatch(  x -> x.intersects( position, extent ) );
+    }
 }
