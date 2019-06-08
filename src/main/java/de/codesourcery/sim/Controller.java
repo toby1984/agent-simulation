@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public class Controller extends Entity implements ITickListener
 {
@@ -81,9 +82,6 @@ public class Controller extends Entity implements ITickListener
     @Override
     public void tick(float deltaSeconds, World world)
     {
-        // sort requests descending by priority
-        requests.sort(Message.PRIO_COMPERATOR);
-
         final Int2ObjectAVLTreeMap<List<Message>> batchedRequests = new Int2ObjectAVLTreeMap<>( (a,b) -> Integer.compare(b,a) );
         for ( Message request : requests )
         {
@@ -92,68 +90,72 @@ public class Controller extends Entity implements ITickListener
         }
 
         // shuffle each batch so messages with the same priority don't get processed
-        // in the same order all the time
+        // in the same order all the time, causing some requests to starve
         for ( var batch : batchedRequests.int2ObjectEntrySet() )
         {
             Collections.shuffle(batch.getValue());
         }
 
-        // try to serve requests using idle robots carrying items first
-        // so they can be used for other tasks
-
-        /*
-         * TODO: Operate on shuffled batches of requests with the same priority instead of always
-         *       processing them in the same order.
-         */
-        for (Iterator<Message> reqIt = requests.iterator(); reqIt.hasNext(); )
+        // first, try to serve requests using idle robots carrying items first
+        // so they can be used for other tasks ASAP
+        for ( var entry : batchedRequests.int2ObjectEntrySet() )
         {
-            final Message req = reqIt.next();
-            final Robot robot = findClosestIdleCarrying(req, world);
-            if ( robot != null )
+            final List<Message> batch = entry.getValue();
+            for (Iterator<Message> reqIt = batch.iterator(); reqIt.hasNext(); )
             {
-                idleCarrying.remove( robot.id );
-                busy.add( robot.id );
-                reqIt.remove();
-                robot.receive(req);
+                final Message req = reqIt.next();
+                final Robot robot = findClosestIdleCarrying(req, world);
+                if ( robot != null )
+                {
+                    idleCarrying.remove( robot.id );
+                    busy.add( robot.id );
+                    reqIt.remove();
+                    robot.receive(req);
+                }
             }
         }
 
-        LongIterator robotIterator = idleEmpty.iterator();
+        // now traverse requests looking for matching offers
+        // and use idle empty robots to fulfill them
         for ( var entry : batchedRequests.int2ObjectEntrySet() )
         {
             final List<Message> batch = entry.getValue();
 
-            for (int i = 0; i < batch.size() && robotIterator.hasNext(); i++)
+            for (int i = 0; i < batch.size() && ! idleEmpty.isEmpty() ; i++)
             {
                 Message request = batch.get(i);
 
-                // find matching offers and prefer the closest one
-                Message candidate = null;
+                // look for matching offers and prefer the closest one
+                Message offer = null;
                 float bestDist2 = 0;
                 for ( var x : offers )
                 {
                     if ( x.getItemAndAmount().type.matches(request.getItemAndAmount().type) )
                     {
                         float dist2 = x.sender.dst2(request.sender);
-                        if ( candidate == null || dist2 < bestDist2 ) {
-                            candidate = x;
+                        if ( offer == null || dist2 < bestDist2 ) {
+                            offer = x;
                             bestDist2 = dist2;
                         }
                     }
                 }
 
-                if (candidate != null)
+                if (offer != null)
                 {
-                    var robot = robots.get(robotIterator.nextLong());
-                    requests.remove( request );
-                    offers.remove(candidate);
-                    robotIterator.remove();
-                    busy.add( robot.id );
-                    if ( Main.DEBUG )
+                    var robot = findClosestRobot( idleEmpty, offer.sender );
+                    if ( robot != null )
                     {
-                        System.out.println( "Using robot " + robot + " that carries " + world.inventory.getAmounts( robot ) );
+                        offers.remove( offer );
+                        // no need to remove request here as we're
+                        // not using them afterward anyway
+                        idleEmpty.remove( robot.id );
+                        busy.add( robot.id );
+                        if ( Main.DEBUG )
+                        {
+                            System.out.println( "Using robot " + robot + " that carries " + world.inventory.getAmounts( robot ) );
+                        }
+                        robot.transfer( offer.sender, offer.getItemAndAmount(), request.sender );
                     }
-                    robot.transfer(candidate.sender, candidate.getItemAndAmount(), request.sender);
                 }
             }
         }
@@ -203,6 +205,24 @@ public class Controller extends Entity implements ITickListener
         }
         offers.clear();
         requests.clear();
+    }
+
+    private Robot findClosestRobot(LongArraySet availableRobotIds, Entity destination)
+    {
+        Robot result = null;
+        float closestDst2 = 0;
+        for ( var it = availableRobotIds.iterator() ; it.hasNext() ;  )
+        {
+            final long robotId = it.nextLong();
+            final Robot r = robots.get( robotId );
+
+            float dist2 = r.dst2( destination );
+            if ( result == null || dist2 < closestDst2 ) {
+                closestDst2 = dist2;
+                result = r;
+            }
+        }
+        return result;
     }
 
     public void busyStateChanged(Robot robot,World world) {
