@@ -2,9 +2,8 @@
 
 This is a very crude multi-agent simulation environment.
 
-The agents (aka 'robots') task is to deliver items between factories and depots. Each robot is assigned to exactly one controller while each factory/depot is serviced by all controllers it is within range.
-
-Controllers have a finite communication range and robots assigned to a controller cannot move beyond its communication range. 
+The agents (aka 'robots') task is to deliver items between factories and depots. Factories consume a specific kind of items and produce a new type of item after a fixed amount of time has elapsed. Factories can only store a limited amount of product and will stop producing more items once their output buffer is full. Likewise they will not produce any items if their input buffer does not hold the required amount of items.
+Depots have a fixed maximum capacity and may be restricted to storing certain kinds of items only. The only item types currently in the simulation are stone and concrete with factories turning 1 stone into 1 concrete or vice-versa. Each robot is assigned to exactly one controller while every factory/depot is serviced by all controllers it is within range. Controllers have a finite communication range and robots assigned to a controller cannot move beyond its communication range. 
 
 ![screenshot](https://raw.githubusercontent.com/toby1984/sim/master/agents.gif)
 
