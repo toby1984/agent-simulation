@@ -6,4 +6,4 @@ The agents (aka 'robots') task is to deliver items between factories and depots.
 
 Controllers have a finite communication range and robots assigned to a controller cannot move beyond its communication range. 
 
-![Image of Yaktocat](https://octodex.github.com/images/yaktocat.png)
+![screenshot](https://raw.githubusercontent.com/toby1984/sim/master/agents.gif)
