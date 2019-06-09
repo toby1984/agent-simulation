@@ -20,10 +20,10 @@ Java >= 11, Maven 3.x
 
 The simulation can be changed/inspected using the mouse and the following keyboard shortcuts. Hovering over an entity will display a tooltip showing detail information.
 
- d -> add depot at mouse pointer location
- f -> add factory at mouse pointer location (factory types alternate each time)
- r -> add robot
- c -> add controller
+ * d -> add depot at mouse pointer location
+ * f -> add factory at mouse pointer location (factory types alternate each time)
+ * r -> add robot
+ * c -> add controller
  
 Hovering over an entity will highlight related entities ; hovering over a robot will highlight it's controller and the source/destination it's transferring items between.
 
