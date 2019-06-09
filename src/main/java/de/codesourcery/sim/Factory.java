@@ -1,8 +1,17 @@
 package de.codesourcery.sim;
 
+import org.apache.commons.lang3.Validate;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public class Factory extends Entity implements IItemProvider,IItemReceiver,ITickListener
 {
-    public ItemType producedItem = ItemType.CONCRETE;
+    private final Set<ItemType> produced;
+
+    public final ItemType producedItem;
     public int maxStorage=10;
 
     public float productionTimeSeconds=2;
@@ -10,16 +19,23 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
 
     public float elapsedSeconds;
 
-    public ItemType input1Type = ItemType.STONE;
+    private ItemType input1Type = ItemType.STONE;
+    private Set<ItemType> inputTypes = Set.of( input1Type );
+
     public int input1Consumed=1;
     public int input1MaxAmount=10;
 
     public int productionLostMissingInput;
     public int productionLostOutputFull;
 
-    public Factory(Vec2D v)
+    public final List<Controller> controllers = new ArrayList<>();
+
+    public Factory(Vec2D v, ItemType producedItem)
     {
         super( v );
+        Validate.notNull( producedItem, "producedItem must not be null" );
+        this.producedItem = producedItem;
+        produced = Set.of( producedItem );
     }
 
     private int input1Stored(World world) {
@@ -75,6 +91,12 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
     }
 
     @Override
+    public Set<ItemType> getAcceptedItems(World world)
+    {
+        return null;
+    }
+
+    @Override
     public int getAcceptedAmount(ItemType type, World world)
     {
         if ( this.input1Type.matches(type ) )
@@ -82,5 +104,29 @@ public class Factory extends Entity implements IItemProvider,IItemReceiver,ITick
             return input1MaxAmount - input1Stored(world );
         }
         return 0;
+    }
+
+    @Override
+    public Set<ItemType> getProvidedItems(World world)
+    {
+        return produced;
+    }
+
+    @Override
+    public void addController(Controller controller)
+    {
+        this.controllers.add( controller );
+    }
+
+    public void setInput1Type(ItemType input1Type)
+    {
+        Validate.notNull( input1Type, "input1Type must not be null" );
+        this.input1Type = input1Type;
+        this.inputTypes = Set.of( input1Type );
+    }
+
+    public ItemType input1Type()
+    {
+        return input1Type;
     }
 }

@@ -3,6 +3,7 @@ package de.codesourcery.sim;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class World
@@ -15,7 +16,14 @@ public class World
 
     public void add( Entity entity )
     {
-        if ( entity instanceof Robot )
+        this.entities.add( entity );
+        if ( entity instanceof ITickListener) {
+            tickListeners.add( (ITickListener) entity );
+        }
+        if ( entity instanceof Controller) {
+            controllers.add( (Controller) entity );
+        }
+        else if ( entity instanceof Robot )
         {
             final Robot r = (Robot) entity;
             if ( ! r.hasController() )
@@ -23,13 +31,13 @@ public class World
                 assignToController( r );
             }
         }
-
-        this.entities.add( entity );
-        if ( entity instanceof ITickListener) {
-            tickListeners.add( (ITickListener) entity );
-        }
-        if ( entity instanceof Controller) {
-            controllers.add( (Controller) entity );
+        else if ( entity instanceof IItemProvider || entity instanceof IItemReceiver )
+        {
+            final List<Controller> controllers = findControllersInRange( entity.position );
+            if ( controllers.isEmpty() ) {
+                throw new IllegalStateException("No controller in range of "+entity);
+            }
+            controllers.forEach( c -> c.register( entity , this ) );
         }
     }
 
@@ -43,7 +51,7 @@ public class World
         }
         // assign to controller with least amount of robots
         controllers.sort( Comparator.comparing( Controller::robotCount ) );
-        controllers.get(0).assignRobot( r, this );
+        controllers.get(0).assign( r, this );
     }
 
     public void tick(float deltaSeconds)
@@ -131,5 +139,10 @@ public class World
     public boolean intersectsAny(Vec2D position, Vec2D extent)
     {
         return entities.stream().anyMatch(  x -> x.intersects( position, extent ) );
+    }
+
+    public Set<ItemType> getAvailableItemTypes(Entity entity)
+    {
+        return inventory.getAvailableItemTypes( entity );
     }
 }

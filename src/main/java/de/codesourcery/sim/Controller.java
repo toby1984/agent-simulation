@@ -28,11 +28,47 @@ public class Controller extends Entity implements ITickListener
     private final LongArraySet idleEmpty =  new LongArraySet();
     private final LongArraySet idleCarrying =  new LongArraySet();
 
+    private final List<IItemProvider> suppliers = new ArrayList<>();
+    private final List<IItemReceiver> receivers = new ArrayList<>();
+
     public int maxSupportedRobots = 500;
 
     public Controller(Vec2D v)
     {
         super( v );
+    }
+
+    public void register(Entity entity, World world)
+    {
+        if ( entity instanceof Robot)
+        {
+            throw new IllegalArgumentException( "Do not pass robots to this method" );
+        }
+        if ( entity instanceof IItemReceiver)
+        {
+            this.receivers.add( (IItemReceiver) entity );
+            ((IItemReceiver) entity).addController( this );
+            if ( entity instanceof IItemProvider ) {
+                this.suppliers.add( (IItemProvider) entity);
+            }
+        } else if ( entity instanceof IItemReceiver) {
+            this.receivers.add( (IItemReceiver) entity );
+            ((IItemReceiver) entity).addController( this );
+        } else {
+            throw new IllegalArgumentException( "Only IItemReceiver or IItemProvider may be registered" );
+        }
+    }
+
+    public void assign(Robot robot, World world)
+    {
+            if ( robots.size() == maxSupportedRobots ) {
+                throw new IllegalStateException( "Cannot assign robot to controller #" + id + " that is already at max. capacity" );
+            }
+            this.robots.put( robot.id, robot );
+            robot.setController( this );
+            // no need to call Robot#addController() here
+            // as robots are also IItemReceiver instances
+            busyStateChanged(robot,world);
     }
 
     public void broadcast(Message msg) {
@@ -48,16 +84,6 @@ public class Controller extends Entity implements ITickListener
             default:
                 throw new IllegalArgumentException("Unhandled switch/case: "+msg.type.kind);
         }
-    }
-
-    public void assignRobot(Robot robot,World world)
-    {
-        if ( robots.size() == maxSupportedRobots ) {
-            throw new IllegalStateException( "Cannot assign robot to controller #" + id + " that is already at max. capacity" );
-        }
-        robot.controller = this;
-        robots.put( robot.id, robot );
-        busyStateChanged(robot,world);
     }
 
     private Robot findClosestIdleCarrying(Message request, World world)

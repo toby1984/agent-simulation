@@ -6,9 +6,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class Inventory
 {
@@ -17,6 +20,12 @@ public class Inventory
 
     // Key is entity ID, value is Map<ItemType,Amount>
     private Long2ObjectArrayMap<Object2IntArrayMap<ItemType>> itemsByEntity = new Long2ObjectArrayMap<>();
+
+    public Set<ItemType> getAvailableItemTypes(Entity entity)
+    {
+        final Object2IntArrayMap<ItemType> map = itemsByEntity.get( entity.id );
+        return map == null ? Collections.emptySet() : Collections.unmodifiableSet( map.keySet() );
+    }
 
     public List<ItemAndAmount> getTotalInventory()
     {

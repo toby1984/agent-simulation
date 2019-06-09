@@ -1,19 +1,22 @@
 package de.codesourcery.sim;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickListener
 {
-    public ItemType[] acceptedItemTypes;
+    public final Set<ItemType> acceptedItemTypes;
     public int minAmount=0;
     public int capacity = 200;
+
+    public final List<Controller> controllers = new ArrayList<>();
 
     public Depot(Vec2D v, ItemType... acceptedItemTypes)
     {
         super( v );
-        this.acceptedItemTypes = acceptedItemTypes;
+        this.acceptedItemTypes = Set.of( acceptedItemTypes );
     }
 
     @Override
@@ -24,7 +27,7 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
         final List<ItemAndAmount> toProcess = world.inventory.getAmounts(this,
             (type, amount) -> amount < minAmount || amount > 0);
 
-        final Set<ItemType> notSeen = new HashSet<>(List.of(acceptedItemTypes));
+        final Set<ItemType> notSeen = new HashSet<>(acceptedItemTypes);
 
         for ( ItemAndAmount item : toProcess )
         {
@@ -78,14 +81,20 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
     public String toString()
     {
         StringBuilder buffer = new StringBuilder();
-        for( int i = 0, len= acceptedItemTypes.length ; i < len ; i++)
+        for( var it = acceptedItemTypes.iterator() ;  it.hasNext() ; )
         {
-             buffer.append( acceptedItemTypes[i] );
-             if ( (i+1) < len ) {
+             buffer.append( it.next() );
+             if ( it.hasNext() ) {
                  buffer.append(",");
              }
         }
         return "Depot #"+id+" {"+buffer+"}";
+    }
+
+    @Override
+    public Set<ItemType> getAcceptedItems(World world)
+    {
+        return acceptedItemTypes;
     }
 
     @Override
@@ -101,6 +110,12 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
         return 0;
     }
 
+    @Override
+    public void addController(Controller controller)
+    {
+        this.controllers.add( controller );
+    }
+
     public boolean isFull(World world) {
         return availableSpace( world ) == 0;
     }
@@ -108,5 +123,11 @@ public class Depot extends Entity implements IItemReceiver,IItemProvider, ITickL
     public String getDebugStatus(World world)
     {
         return toString()+"\n Stored "+world.inventory.getStoredAmount(this)+" items out of "+capacity+"\n";
+    }
+
+    @Override
+    public Set<ItemType> getProvidedItems(World world)
+    {
+        return world.getAvailableItemTypes( this );
     }
 }

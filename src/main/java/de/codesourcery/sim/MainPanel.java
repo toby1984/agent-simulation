@@ -3,7 +3,6 @@ package de.codesourcery.sim;
 import javax.swing.JPanel;
 import javax.swing.ToolTipManager;
 import java.awt.Color;
-import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -13,7 +12,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
-import java.awt.font.LineMetrics;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 
@@ -104,12 +102,9 @@ public class MainPanel extends JPanel
                         world.add( robot );
                         break;
                     case KeyEvent.VK_F:  // add factory
-                        final Factory factory = new Factory( mousePositionWorld );
-                        if ( !flip )
-                        {
-                            factory.producedItem = ItemType.STONE;
-                            factory.input1Type = ItemType.CONCRETE;
-                        }
+                        final Factory factory =
+                                new Factory( mousePositionWorld, flip ? ItemType.CONCRETE : ItemType.STONE );
+
                         flip = !flip;
 
                         world.add( factory );
@@ -312,7 +307,7 @@ public class MainPanel extends JPanel
                 // robot -> red circle
                 final Robot r = (Robot) entity;
                 g.setColor( Color.RED );
-                if ( (entity == finalSrc || entity == finalDst ) || ( highlightedEntity instanceof Controller && r.controller == highlightedEntity ) )
+                if ( (entity == finalSrc || entity == finalDst ) || ( highlightedEntity instanceof Controller && r.controller() == highlightedEntity ) )
                 {
                     g.setColor( highlightColor);
                 }
@@ -348,7 +343,7 @@ public class MainPanel extends JPanel
                 if ( highlightedEntity instanceof Factory && c.isInRange( highlightedEntity ) ) {
                     doHighlight = true;
                 }
-                if ( highlightedEntity instanceof Robot && ((Robot) highlightedEntity).controller == c )
+                if ( highlightedEntity instanceof Robot && ((Robot) highlightedEntity).controller() == c )
                 {
                     doHighlight = true;
                 }

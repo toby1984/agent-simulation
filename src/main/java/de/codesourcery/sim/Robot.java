@@ -1,5 +1,7 @@
 package de.codesourcery.sim;
 
+import java.util.Set;
+
 public class Robot extends MoveableEntity implements IItemReceiver
 {
     private static final float PICKUP_DIST = 0.1f;
@@ -7,7 +9,7 @@ public class Robot extends MoveableEntity implements IItemReceiver
 
     public State currentState = new IdleState();
     public int maxCarryingCapacity = 2;
-    public Controller controller;
+    private Controller controller;
 
     public abstract class State {
 
@@ -272,6 +274,13 @@ public class Robot extends MoveableEntity implements IItemReceiver
     }
 
     @Override
+    public Set<ItemType> getAcceptedItems( World world )
+    {
+        final ItemType carried = carriedItem( world );
+        return Set.of( carried == null ? ItemType.ANY : carried );
+    }
+
+    @Override
     public int getAcceptedAmount(ItemType type, World world)
     {
         final ItemAndAmount itemAndAmount = carriedItemAndAmount(world);
@@ -279,5 +288,20 @@ public class Robot extends MoveableEntity implements IItemReceiver
             return maxCarryingCapacity;
         }
         return maxCarryingCapacity - itemAndAmount.amount;
+    }
+
+    @Override
+    public void addController(Controller controller)
+    {
+        this.controller = controller;
+    }
+
+    public Controller controller() {
+        return this.controller;
+    }
+
+    public void setController(Controller controller)
+    {
+        this.controller = controller;
     }
 }

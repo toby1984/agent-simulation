@@ -83,13 +83,16 @@ public class Main extends JFrame
         // add factories
         for ( int i = 0 ; i < factories ; i++ )
         {
-            final Factory factory = new Factory( tmp );
+            final Factory factory;
+            if ( r.nextBoolean() ) {
+                factory = new Factory( tmp, ItemType.STONE );
+                factory.setInput1Type(ItemType.CONCRETE);
+            } else {
+                factory = new Factory( tmp, ItemType.CONCRETE);
+                factory.setInput1Type( ItemType.STONE );
+            }
             rndLocation.accept( factory );
             factory.productionTimeSeconds = 1 + r.nextFloat()*3;
-            if ( r.nextBoolean() ) {
-                factory.producedItem = ItemType.STONE;
-                factory.input1Type = ItemType.CONCRETE;
-            }
             w.add( factory );
         }
 
