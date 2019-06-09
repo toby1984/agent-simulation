@@ -33,7 +33,7 @@ Hovering over a controller will show all robots controlled by it.
 
 The following things might or might not ever get done 
 
-* Speed-up spatial search by using a Kd-tree
+* Speed-up nearest-neighbour search by using some spatial datastructure (a simple grid ? Quadtree?)
 * Let robots move using real path planning, avoiding static entities on the way
 * Let robots move using steering behaviour that avoids other robots
 * Get rid of all avoidable object allocations in hot code paths
