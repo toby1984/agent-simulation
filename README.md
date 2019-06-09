@@ -28,3 +28,12 @@ The simulation can be changed/inspected using the mouse and the following keyboa
 Hovering over an entity will highlight related entities ; hovering over a robot will highlight it's controller and the source/destination it's transferring items between.
 
 Hovering over a controller will show all robots controlled by it. 
+
+# To do
+
+The following things might or might not ever get done 
+
+* Speed-up spatial search by using a Kd-tree
+* Let robots move using real path planning, avoiding static entities on the way
+* Let robots move using steering behaviour that avoids other robots
+* Get rid of all avoidable object allocations in hot code paths
